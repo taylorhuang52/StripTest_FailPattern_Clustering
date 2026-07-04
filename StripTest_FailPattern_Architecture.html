@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Strip Test Fail Pattern AI — 模型架構說明</title>
+<style>
+:root{
+  --bg:#12141c; --panel:#1a1e2a; --panel3:#232838; --accent:#4682d2;
+  --text:#d7dceb; --muted:#8a93ab; --ok:#3cbe82; --border:#37415a; --warn:#e8a020; --bad:#e5484d;
+  --c-vth:#e5484d; --c-vfsd:#f2994a; --c-ipd:#bb6bd9; --c-idss1:#2ec4c4; --c-idss2:#e0559e; --c-idss3:#c9b458;
+  --c-pass:#2e9e5b; --c-nodata:#262b3a;
+  --s1:#4682d2; --s2:#b5451b;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{font-family:"Segoe UI","Microsoft JhengHei",sans-serif;background:var(--bg);color:var(--text);line-height:1.65;}
+header.top{position:sticky;top:0;z-index:60;display:flex;align-items:center;gap:18px;height:56px;padding:0 22px;background:#0e1018;border-bottom:2px solid var(--border);}
+header.top .logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:14.5px;color:var(--accent);white-space:nowrap;}
+header.top .logo svg{width:20px;height:20px;}
+nav.toc{display:flex;gap:2px;overflow-x:auto;}
+nav.toc a{color:var(--muted);text-decoration:none;font-size:12.5px;font-weight:600;padding:8px 12px;border-radius:6px;white-space:nowrap;}
+nav.toc a:hover{color:var(--text);background:rgba(70,130,210,.1);}
+
+.wrap{max-width:1080px;margin:0 auto;padding:36px 22px 80px;}
+.hero{text-align:center;padding:26px 10px 40px;}
+.hero .eyebrow{color:var(--accent);font-size:12px;font-weight:800;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;}
+.hero h1{font-size:30px;font-weight:800;margin-bottom:12px;letter-spacing:.2px;}
+.hero p{color:var(--muted);font-size:14.5px;max-width:640px;margin:0 auto;}
+
+section{margin:60px 0;}
+section h2{font-size:20px;font-weight:800;margin-bottom:6px;display:flex;align-items:center;gap:10px;}
+section h2 .badge{font-size:10.5px;font-weight:800;padding:3px 9px;border-radius:20px;color:#0e1018;letter-spacing:.4px;}
+section h2 .badge.s1{background:var(--s1);color:#fff;}
+section h2 .badge.s2{background:var(--s2);color:#fff;}
+section .lead{color:var(--muted);font-size:13.5px;margin-bottom:22px;max-width:760px;}
+h3{font-size:14.5px;font-weight:700;margin:26px 0 10px;color:var(--text);}
+p{font-size:13.5px;color:#c3c9dc;margin-bottom:10px;}
+ul,ol{padding-left:20px;margin-bottom:12px;}
+li{font-size:13.5px;color:#c3c9dc;margin-bottom:5px;}
+code{background:#0c0e14;border:1px solid var(--border);border-radius:4px;padding:1px 6px;font-size:12px;font-family:Consolas,monospace;color:#9fd6ff;}
+
+.card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:22px 24px;margin:16px 0;}
+.card.tint-s1{border-color:#2f4d78;}
+.card.tint-s2{border-color:#7a3a1f;}
+
+/* ── Pipeline diagram ── */
+.pipeline{display:flex;align-items:stretch;gap:0;flex-wrap:wrap;margin:22px 0;}
+.pl-step{background:var(--panel3);border:1px solid var(--border);border-radius:10px;padding:14px 16px;min-width:150px;flex:1 1 150px;position:relative;}
+.pl-step .n{font-size:10px;font-weight:800;color:var(--muted);letter-spacing:1px;margin-bottom:4px;}
+.pl-step .t{font-size:13px;font-weight:700;color:var(--text);margin-bottom:3px;}
+.pl-step .d{font-size:11.3px;color:var(--muted);}
+.pl-arrow{display:flex;align-items:center;justify-content:center;padding:0 8px;color:var(--accent);font-size:18px;flex:0 0 auto;}
+@media (max-width:820px){.pl-arrow{width:100%;transform:rotate(90deg);padding:6px 0;}}
+
+.flow-big{display:flex;align-items:center;justify-content:center;gap:0;flex-wrap:wrap;margin:26px 0;}
+.flow-box{border-radius:14px;padding:20px 26px;text-align:center;min-width:200px;}
+.flow-box.stage1{background:linear-gradient(160deg,#1c2740,#182035);border:1.5px solid var(--s1);}
+.flow-box.stage2{background:linear-gradient(160deg,#2b1a12,#221410);border:1.5px solid var(--s2);}
+.flow-box .k{font-size:10.5px;font-weight:800;letter-spacing:1.5px;margin-bottom:6px;}
+.flow-box.stage1 .k{color:#8fb4e6;}
+.flow-box.stage2 .k{color:#e8996f;}
+.flow-box .tt{font-size:15px;font-weight:800;margin-bottom:6px;}
+.flow-box .dd{font-size:11.5px;color:var(--muted);}
+.flow-arr{font-size:22px;color:var(--muted);padding:0 16px;}
+.flow-mid{background:var(--panel3);border:1px dashed var(--border);border-radius:10px;padding:14px 18px;font-size:12px;color:var(--text);text-align:center;min-width:170px;}
+.flow-mid .k{font-size:10px;font-weight:800;color:var(--accent);letter-spacing:1px;margin-bottom:4px;}
+@media(max-width:900px){.flow-big{flex-direction:column;}.flow-arr{transform:rotate(90deg);padding:10px 0;}}
+
+/* ── Schema table ── */
+table.schema{width:100%;border-collapse:collapse;font-size:12.3px;margin:14px 0;}
+table.schema th{background:#0e1018;color:var(--muted);text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);}
+table.schema td{padding:7px 10px;border-bottom:1px solid #262b3a;color:#c3c9dc;}
+table.schema tr:last-child td{border-bottom:none;}
+table.schema code{white-space:nowrap;}
+
+/* ── Feature grid cards ── */
+.feat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:16px 0;}
+.feat-card{background:var(--panel3);border:1px solid var(--border);border-radius:9px;padding:13px 15px;}
+.feat-card .t{font-size:12.5px;font-weight:700;color:var(--text);margin-bottom:4px;}
+.feat-card .d{font-size:11.5px;color:var(--muted);}
+
+/* ── Pattern gallery (mini heatmap icons) ── */
+.pattern-gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin:18px 0;}
+.pattern-card{background:var(--panel3);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center;}
+.pattern-card .mini-grid{display:inline-grid;gap:1.5px;margin-bottom:10px;}
+.pattern-card .cell{width:9px;height:9px;border-radius:1.5px;}
+.pattern-card .name{font-size:12px;font-weight:700;color:var(--text);}
+.pattern-card .desc{font-size:10.8px;color:var(--muted);margin-top:3px;}
+
+/* ── Model track compare ── */
+.track-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:16px 0;}
+@media(max-width:760px){.track-grid{grid-template-columns:1fr;}}
+.track{background:var(--panel3);border:1px solid var(--border);border-radius:10px;padding:16px 18px;}
+.track .tag{display:inline-block;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;margin-bottom:10px;}
+.track.rule .tag{background:#2c3a52;color:#8fb4e6;}
+.track.ml .tag{background:#3a2c1c;color:#e8996f;}
+.track h4{font-size:13.5px;margin-bottom:8px;}
+.track ul{margin-bottom:0;}
+
+/* ── Data flow steps numbered ── */
+.steps{counter-reset:step;}
+.step{display:flex;gap:14px;margin-bottom:16px;}
+.step .circle{flex:0 0 auto;width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12.5px;counter-increment:step;}
+.step .body .t{font-size:13.5px;font-weight:700;color:var(--text);margin-bottom:2px;}
+.step .body .d{font-size:12.3px;color:var(--muted);}
+
+.callout{border-left:3px solid var(--warn);background:rgba(232,160,32,.08);padding:12px 16px;border-radius:6px;font-size:12.5px;color:#e9d3a3;margin:16px 0;}
+.callout.info{border-left-color:var(--accent);background:rgba(70,130,210,.08);color:#bcd4f2;}
+
+footer{text-align:center;padding:30px 20px;color:var(--muted);font-size:11.5px;border-top:1px solid var(--border);margin-top:40px;}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="logo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+    Strip Test Fail Pattern AI
+  </div>
+  <nav class="toc">
+    <a href="#overview">總覽</a>
+    <a href="#architecture">整體架構</a>
+    <a href="#stage1">Stage 1</a>
+    <a href="#stage2">Stage 2</a>
+    <a href="#patterns">Pattern 類別</a>
+    <a href="#schema">資料格式</a>
+    <a href="#roadmap">延伸規劃</a>
+  </nav>
+</header>
+
+<div class="wrap">
+
+  <div class="hero">
+    <div class="eyebrow">Model Architecture Overview</div>
+    <h1>Strip Test Defect Fail Pattern 自動偵測模型</h1>
+    <p>說明 Stage 1（資料蒐集 / Dataset Builder）與 Stage 2（Fail Pattern 歸類模型）如何串接，
+      將測試 log（VTH／VFSD／IPD-10V／IDSS1～IDSS3）轉換為可訓練、可推論的空間 fail pattern 分類系統。</p>
+  </div>
+
+  <!-- ══════════════ OVERVIEW ══════════════ -->
+  <section id="overview">
+    <h2>1. 為什麼要分兩個 Stage</h2>
+    <p class="lead">Strip test 的 fail pattern 和「測試項」高度相關 —— 同樣是 fail，發生在邊緣、單一 row、還是整片群聚，代表的製程異常完全不同。要讓 AI 判斷 pattern，必須先有「乾淨、結構化、有空間座標」的資料，這正是 Stage 1 要解決的問題；Stage 2 才是真正的分類模型。</p>
+    <div class="card">
+      <ul>
+        <li><b>Stage 1 — 資料蒐集：</b>把原始 xls log 轉成「每個 strip 一筆」的結構化樣本（特徵向量 + 13×13 空間網格），並提供人工標記介面，產出可直接餵給模型的 dataset。</li>
+        <li><b>Stage 2 — Fail Pattern 歸類：</b>拿 Stage 1 產出的 dataset 做訓練 / 推論，把每個 strip 分類成 Edge、Corner、Streak、Cluster、Random…等已知異常樣態，用於良率分析與製程異常告警。</li>
+      </ul>
+    </div>
+    <div class="callout info">兩個 Stage 是獨立可運作的模組：Stage 1 現在就能單獨使用（匯出 CSV/JSON 給工程師人工判讀）；Stage 2 之後可以隨時接上，不需要重新設計資料格式。</div>
+  </section>
+
+  <!-- ══════════════ ARCHITECTURE ══════════════ -->
+  <section id="architecture">
+    <h2>2. 整體架構</h2>
+    <p class="lead">兩個 Stage 之間用一份共同的「Dataset JSON / CSV」規格銜接，這是整個系統唯一的耦合點。</p>
+
+    <div class="flow-big">
+      <div class="flow-box stage1">
+        <div class="k">STAGE 1</div>
+        <div class="tt">資料蒐集</div>
+        <div class="dd">xls Log → 結構化 Dataset</div>
+      </div>
+      <div class="flow-arr">→</div>
+      <div class="flow-mid">
+        <div class="k">交接介面</div>
+        Strip-level CSV<br>Die-level CSV<br>Dataset JSON<br>（含 grid + 人工標記）
+      </div>
+      <div class="flow-arr">→</div>
+      <div class="flow-box stage2">
+        <div class="k">STAGE 2</div>
+        <div class="tt">Fail Pattern 歸類</div>
+        <div class="dd">訓練模型 → 預測 Pattern 類別</div>
+      </div>
+    </div>
+
+    <div class="pipeline">
+      <div class="pl-step"><div class="n">01</div><div class="t">測試 Log</div><div class="d">.xls / .xlsx / .zip（LoggerData 分頁）</div></div>
+      <div class="pl-arrow">›</div>
+      <div class="pl-step"><div class="n">02</div><div class="t">Stage 1 解析</div><div class="d">限定 VTH/VFSD/IPD-10V/IDSS1-3</div></div>
+      <div class="pl-arrow">›</div>
+      <div class="pl-step"><div class="n">03</div><div class="t">Dataset 匯出</div><div class="d">特徵向量 + 空間網格 + 標記</div></div>
+      <div class="pl-arrow">›</div>
+      <div class="pl-step"><div class="n">04</div><div class="t">Stage 2 訓練</div><div class="d">分類器學習 pattern 特徵</div></div>
+      <div class="pl-arrow">›</div>
+      <div class="pl-step"><div class="n">05</div><div class="t">推論 / 告警</div><div class="d">新 log 自動判讀 + heatmap 標註</div></div>
+    </div>
+  </section>
+
+  <!-- ══════════════ STAGE 1 ══════════════ -->
+  <section id="stage1">
+    <h2><span class="badge s1">STAGE 1</span> 資料蒐集（Dataset Builder）</h2>
+    <p class="lead">目的：把非結構化的測試機台 log，轉換成「每顆 die 有座標與 pass/fail」「每個 strip 有一組特徵向量」的乾淨資料集。</p>
+
+    <div class="card tint-s1">
+      <h3>3.1　解析管線</h3>
+      <div class="steps">
+        <div class="step"><div class="circle">1</div><div class="body"><div class="t">讀取 LoggerData 分頁</div><div class="d">用 SheetJS 解析 xls/xlsx，定位第 10 列表頭、第 4/5 列 Min/Max Limit。</div></div></div>
+        <div class="step"><div class="circle">2</div><div class="body"><div class="t">限定判定測試項</div><div class="d">只取 VTH、VFSD、IPD-10V、IDSS1、IDSS2、IDSS3 六欄；其餘（BVDSS/Delta3…）不參與 fail 判定。</div></div></div>
+        <div class="step"><div class="circle">3</div><div class="body"><div class="t">Die 級 pass/fail 判定</div><div class="d">每個測試項各自比對 Min/Max Limit（可用檔案內建值，也可手動覆寫），標記 fail 旗標。</div></div></div>
+        <div class="step"><div class="circle">4</div><div class="body"><div class="t">還原空間座標</div><div class="d">Log 內的 <code>X</code> 欄其實是 1~169 的序號，用 <code>x=⌈X/13⌉，y=13-((X-1) mod 13)</code> 還原成 13×13 實體網格；<code>Remark</code> 欄末 2 碼為 slot（strip）編號。</div></div></div>
+        <div class="step"><div class="circle">5</div><div class="body"><div class="t">依 Lot + Slot 分組</div><div class="d">每組即為一個 strip 樣本（一個 13×13 的 die 網格），是 Stage 2 分類的最小單位。</div></div></div>
+        <div class="step"><div class="circle">6</div><div class="body"><div class="t">特徵工程</div><div class="d">在每個 strip 上計算良率、各測試項 fail rate、空間分布特徵（下方 3.2）。</div></div></div>
+        <div class="step"><div class="circle">7</div><div class="body"><div class="t">人工標記（可選）</div><div class="d">工程師可在 heatmap 預覽介面手動標註 pattern 類別，作為 Stage 2 監督式學習的 ground truth。</div></div></div>
+      </div>
+    </div>
+
+    <h3>3.2　每個 Strip 產出的特徵（Feature Vector）</h3>
+    <div class="feat-grid">
+      <div class="feat-card"><div class="t">Yield / Fail Count</div><div class="d">總良率、fail die 數，作為基本篩選門檻。</div></div>
+      <div class="feat-card"><div class="t">各測試項 Fail Rate</div><div class="d">VTH / VFSD / IPD-10V / IDSS1-3 各自的 fail count 與比例，判斷 Dominant Fail Item。</div></div>
+      <div class="feat-card"><div class="t">Edge / Interior Fail Ratio</div><div class="d">邊界 die vs 內部 die 的 fail 比例 → 判斷 Edge-Ring 樣態。</div></div>
+      <div class="feat-card"><div class="t">Center Fail Ratio</div><div class="d">中心區塊 fail 比例 → 判斷 Center 樣態。</div></div>
+      <div class="feat-card"><div class="t">Row / Column Streak</div><div class="d">單一 row 或 column 的最大 fail 密度 → 判斷條狀（Streak）樣態。</div></div>
+      <div class="feat-card"><div class="t">Cluster Score</div><div class="d">Fail die 中，有相鄰 fail die（8-neighbor）的比例 → 判斷群聚樣態。</div></div>
+      <div class="feat-card"><div class="t">Bounding-Box Density</div><div class="d">Fail die 外接矩形的密度 → 判斷是否集中在小範圍。</div></div>
+      <div class="feat-card"><div class="t">Quadrant 分布</div><div class="d">四象限 fail 數與主導象限 → 判斷 Corner 樣態。</div></div>
+    </div>
+
+    <div class="callout">這些特徵本身就是可解釋的判斷依據；Stage 2 無論用規則式或機器學習，輸入端都是這組特徵（或搭配原始 13×13 grid）。</div>
+  </section>
+
+  <!-- ══════════════ STAGE 2 ══════════════ -->
+  <section id="stage2">
+    <h2><span class="badge s2">STAGE 2</span> Fail Pattern 歸類模型</h2>
+    <p class="lead">目的：拿 Stage 1 產出的 dataset，訓練一個能自動把每個 strip 分類到已知異常樣態的模型，並可對新 log 即時推論。</p>
+
+    <h3>4.1　兩種可行的模型路線</h3>
+    <div class="track-grid">
+      <div class="track rule">
+        <span class="tag">路線 A · 規則式 / 統計式</span>
+        <h4>Heuristic Classifier</h4>
+        <ul>
+          <li>直接用 Stage 1 的特徵（edge ratio、streak、cluster score…）設定門檻值分類</li>
+          <li>不需要標記資料就能先上線，作為 baseline</li>
+          <li>可解釋性最高，工程師容易驗證與調整門檻</li>
+          <li>缺點：門檻需人工調校，遇到混合型 pattern（如同時 Edge + Cluster）較難處理</li>
+        </ul>
+      </div>
+      <div class="track ml">
+        <span class="tag">路線 B · 機器學習</span>
+        <h4>Feature-based / Image-based Classifier</h4>
+        <ul>
+          <li><b>Tabular 模型</b>（如決策樹 / Random Forest / 小型 MLP）：輸入 Stage 1 的特徵向量</li>
+          <li><b>Image-based 模型</b>（如小型 CNN）：直接輸入 13×13 grid（pass/fail/測試項別 one-hot），保留完整空間資訊</li>
+          <li>需要 Stage 1 累積的人工標記樣本作為訓練資料</li>
+          <li>優點：能學到規則式難以描述的混合樣態，且會隨資料量提升準確率</li>
+        </ul>
+      </div>
+    </div>
+    <div class="callout info">建議做法：先用路線 A 上線建立 baseline 並開始累積人工標記，樣本量足夠後（例如每類別 ≥ 30～50 個標記樣本）再導入路線 B，並用路線 A 的結果做交叉驗證。</div>
+
+    <h3>4.2　訓練流程</h3>
+    <div class="steps">
+      <div class="step"><div class="circle">1</div><div class="body"><div class="t">彙整標記資料</div><div class="d">收集多批 Stage 1 匯出的 Dataset JSON，篩出已標記（manualLabel 非空）的 strip 作為訓練集。</div></div></div>
+      <div class="step"><div class="circle">2</div><div class="body"><div class="t">切分訓練 / 驗證集</div><div class="d">依 Lot 或時間切分，避免同一 Lot 內的 strip 同時出現在訓練與驗證集（防止資料洩漏）。</div></div></div>
+      <div class="step"><div class="circle">3</div><div class="body"><div class="t">特徵標準化</div><div class="d">對 fail rate、streak、cluster score 等做標準化；類別不平衡（正常 strip 遠多於異常）需做加權或取樣調整。</div></div></div>
+      <div class="step"><div class="circle">4</div><div class="body"><div class="t">模型訓練與選擇</div><div class="d">比較路線 A（門檻）與路線 B（模型）在驗證集上的表現，以混淆矩陣、各類別 Precision/Recall 評估。</div></div></div>
+      <div class="step"><div class="circle">5</div><div class="body"><div class="t">部署推論</div><div class="d">新 log 進來後，重跑 Stage 1 相同的解析與特徵計算，輸出結果餵給 Stage 2 模型，得到 pattern 類別與信心分數。</div></div></div>
+      <div class="step"><div class="circle">6</div><div class="body"><div class="t">回饋標記</div><div class="d">工程師對模型判斷不同意時可修正標記，修正結果回流成新的訓練資料，形成持續改善迴圈。</div></div></div>
+    </div>
+
+    <h3>4.3　推論輸出</h3>
+    <p>對每個 strip，Stage 2 輸出：</p>
+    <ul>
+      <li><b>Pattern 類別</b>（如 Edge-Ring / Row-Streak / Cluster…）</li>
+      <li><b>信心分數</b>（模型對此分類的把握程度）</li>
+      <li><b>對應 heatmap</b>（沿用 Stage 1 的視覺化邏輯，直接標註判定依據，方便工程師覆核）</li>
+    </ul>
+  </section>
+
+  <!-- ══════════════ PATTERN GALLERY ══════════════ -->
+  <section id="patterns">
+    <h2>5. Fail Pattern 類別範例</h2>
+    <p class="lead">以下為 Stage 1 人工標記選項對應的典型空間樣態示意（示意用簡化網格，非真實資料）。</p>
+    <div class="pattern-gallery" id="patternGallery"></div>
+  </section>
+
+  <!-- ══════════════ SCHEMA ══════════════ -->
+  <section id="schema">
+    <h2>6. Stage 1 → Stage 2 資料交接格式</h2>
+    <p class="lead">Stage 2 的所有輸入，都來自 Stage 1 匯出的三種檔案之一。</p>
+
+    <h3>6.1　Strip-Level CSV（訓練用主要 Dataset，一列 = 一個 strip）</h3>
+    <table class="schema">
+      <tr><th>欄位</th><th>說明</th></tr>
+      <tr><td><code>Lot / Slot</code></td><td>Lot 檔名、Slot（strip）編號</td></tr>
+      <tr><td><code>TotalDies / FailDies / Yield</code></td><td>該 strip 的基本良率資訊</td></tr>
+      <tr><td><code>{ITEM}_FailCount / {ITEM}_FailRate</code></td><td>VTH/VFSD/IPD-10V/IDSS1-3 各自的 fail 統計</td></tr>
+      <tr><td><code>DominantFailItem</code></td><td>fail 數最多的測試項</td></tr>
+      <tr><td><code>EdgeFailRatio / InteriorFailRatio / CenterFailRatio</code></td><td>空間分布特徵</td></tr>
+      <tr><td><code>MaxRowFailFrac / MaxColFailFrac</code></td><td>條狀樣態偵測特徵</td></tr>
+      <tr><td><code>ClusterScore / BBoxDensity / BBoxW / BBoxH</code></td><td>群聚樣態偵測特徵</td></tr>
+      <tr><td><code>Quad_TL/TR/BL/BR / DominantQuadrant</code></td><td>四象限分布</td></tr>
+      <tr><td><code>ManualLabel</code></td><td>人工標記的 pattern 類別（Stage 2 訓練標籤 y）</td></tr>
+    </table>
+
+    <h3>6.2　Die-Level CSV（逐顆資料，供細部分析 / debug）</h3>
+    <table class="schema">
+      <tr><th>欄位</th><th>說明</th></tr>
+      <tr><td><code>Lot / Slot / Serial / X / Y</code></td><td>身分與座標</td></tr>
+      <tr><td><code>VTH / VFSD / IPD_10V / IDSS1 / IDSS2 / IDSS3</code></td><td>實測值</td></tr>
+      <tr><td><code>{ITEM}_Fail</code></td><td>個別測試項 pass/fail（0/1）</td></tr>
+      <tr><td><code>AnyFail / FailCount</code></td><td>整體是否 fail、同時 fail 幾項</td></tr>
+    </table>
+
+    <h3>6.3　Dataset JSON（訓練 Image-based 模型 / 完整存檔用）</h3>
+    <table class="schema">
+      <tr><th>欄位</th><th>說明</th></tr>
+      <tr><td><code>targetItems</code></td><td>本次判定的測試項清單</td></tr>
+      <tr><td><code>strips[].features</code></td><td>同 Strip-Level CSV 的特徵物件</td></tr>
+      <tr><td><code>strips[].grid</code></td><td>13×13 陣列，每格為 <code>{s:"pass"|"fail"|"nodata", item, multi}</code>，可直接轉成訓練影像</td></tr>
+      <tr><td><code>strips[].manualLabel</code></td><td>人工標記類別</td></tr>
+      <tr><td><code>strips[].dies</code></td><td>逐顆原始資料（與 Die-Level CSV 對應）</td></tr>
+    </table>
+  </section>
+
+  <!-- ══════════════ ROADMAP ══════════════ -->
+  <section id="roadmap">
+    <h2>7. 延伸規劃</h2>
+    <ul>
+      <li>累積跨批 Lot 的標記資料後，導入路線 B（ML / CNN）模型並持續迭代</li>
+      <li>將 Dominant Fail Item + Pattern 類別組合，建立製程異常對照表（例如「IPD-10V + Edge-Ring」對應特定製程站點）</li>
+      <li>視需要擴充判定測試項（目前限定 VTH/VFSD/IPD-10V/IDSS1-3，其餘測試項可依相同架構加入）</li>
+      <li>Stage 2 推論結果可回寫至 Stage 1 的 heatmap 介面，做「AI 判讀 vs 人工標記」的覆核與再訓練迴圈</li>
+    </ul>
+  </section>
+
+</div>
+
+<footer>Strip Test Fail Pattern AI — 架構說明文件（Stage 1 + Stage 2）</footer>
+
+<script>
+// ── Pattern gallery renderer: draw small illustrative grids for each label ──
+const PALETTE = {
+  pass: '#2e9e5b', fail: '#e5484d', empty: '#262b3a'
+};
+const G = 9; // illustrative grid size (smaller than real 13x13 for compactness)
+
+function emptyGrid(){ return Array.from({length:G},()=>Array(G).fill(0)); }
+function setCells(grid, cells){ cells.forEach(([x,y])=>{ if(grid[y] && grid[y][x]!==undefined) grid[y][x]=1; }); return grid; }
+
+function borderPattern(){
+  const g=emptyGrid();
+  for(let x=0;x<G;x++){ if(Math.random()<0.75){g[0][x]=1;g[G-1][x]=1;} }
+  for(let y=0;y<G;y++){ if(Math.random()<0.75){g[y][0]=1;g[y][G-1]=1;} }
+  return g;
+}
+function cornerPattern(){
+  const g=emptyGrid();
+  for(let y=0;y<3;y++)for(let x=0;x<3;x++) if(Math.random()<0.8) g[y][x]=1;
+  return g;
+}
+function centerPattern(){
+  const g=emptyGrid();
+  for(let y=3;y<6;y++)for(let x=3;x<6;x++) if(Math.random()<0.85) g[y][x]=1;
+  return g;
+}
+function rowStreakPattern(){
+  const g=emptyGrid(); const r=4;
+  for(let x=0;x<G;x++) if(Math.random()<0.85) g[r][x]=1;
+  return g;
+}
+function colStreakPattern(){
+  const g=emptyGrid(); const c=4;
+  for(let y=0;y<G;y++) if(Math.random()<0.85) g[y][c]=1;
+  return g;
+}
+function clusterPattern(){
+  const g=emptyGrid();
+  const cx=2+Math.floor(Math.random()*4), cy=2+Math.floor(Math.random()*4);
+  for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
+    const x=cx+dx,y=cy+dy;
+    if(g[y]&&g[y][x]!==undefined&&Math.random()<0.85) g[y][x]=1;
+  }
+  return g;
+}
+function randomPattern(){
+  const g=emptyGrid();
+  for(let i=0;i<7;i++){ const x=Math.floor(Math.random()*G), y=Math.floor(Math.random()*G); g[y][x]=1; }
+  return g;
+}
+function fullFailPattern(){
+  const g=emptyGrid();
+  for(let y=0;y<G;y++)for(let x=0;x<G;x++) if(Math.random()<0.92) g[y][x]=1;
+  return g;
+}
+function nonePattern(){ return emptyGrid(); }
+
+const PATTERNS = [
+  {name:"None / No Fail", desc:"全數 pass，無異常", fn:nonePattern},
+  {name:"Random / Scatter", desc:"零星分布，無特定規律", fn:randomPattern},
+  {name:"Edge-Ring", desc:"集中在 strip 邊緣", fn:borderPattern},
+  {name:"Corner", desc:"集中在單一角落", fn:cornerPattern},
+  {name:"Center", desc:"集中在中心區域", fn:centerPattern},
+  {name:"Row-Streak", desc:"單一橫向 row 整排 fail", fn:rowStreakPattern},
+  {name:"Column-Streak", desc:"單一縱向 column 整排 fail", fn:colStreakPattern},
+  {name:"Cluster", desc:"局部小範圍群聚", fn:clusterPattern},
+  {name:"Full-Fail", desc:"整片幾乎全數 fail", fn:fullFailPattern},
+];
+
+const gallery = document.getElementById('patternGallery');
+PATTERNS.forEach(p=>{
+  const grid = p.fn();
+  const card = document.createElement('div');
+  card.className='pattern-card';
+  const gridEl = document.createElement('div');
+  gridEl.className='mini-grid';
+  gridEl.style.gridTemplateColumns = `repeat(${G}, 9px)`;
+  for(let y=0;y<G;y++){
+    for(let x=0;x<G;x++){
+      const cell=document.createElement('div');
+      cell.className='cell';
+      cell.style.background = grid[y][x] ? PALETTE.fail : PALETTE.pass;
+      gridEl.appendChild(cell);
+    }
+  }
+  card.appendChild(gridEl);
+  const name=document.createElement('div'); name.className='name'; name.textContent=p.name;
+  const desc=document.createElement('div'); desc.className='desc'; desc.textContent=p.desc;
+  card.appendChild(name); card.appendChild(desc);
+  gallery.appendChild(card);
+});
+</script>
+</body>
+</html>

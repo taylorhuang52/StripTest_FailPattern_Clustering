@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Strip Test Fail Pattern — Stage 1 資料蒐集</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://unpkg.com/lucide@latest" onerror="window.lucide={createIcons:function(){}}"></script>
+<style>
+:root{
+  --bg:#12141c; --panel:#1a1e2a; --panel2:#202430; --accent:#4682d2;
+  --text:#d7dceb; --muted:#8a93ab; --ok:#3cbe82; --border:#37415a; --warn:#e8a020;
+  --bad:#e5484d; --panel3:#232838;
+  --c-vth:#e5484d; --c-vfsd:#f2994a; --c-ipd:#bb6bd9; --c-idss1:#2ec4c4; --c-idss2:#e0559e; --c-idss3:#c9b458;
+  --c-pass:#2e9e5b; --c-nodata:#262b3a;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:"Segoe UI","Microsoft JhengHei",sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:40px;}
+header.top{
+  position:sticky; top:0; z-index:50;
+  display:flex; align-items:center; gap:12px;
+  height:56px; padding:0 22px; background:#0e1018; border-bottom:2px solid var(--border);
+}
+header.top .logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:15px;color:var(--accent);letter-spacing:.4px;}
+header.top .logo svg{width:22px;height:22px;}
+header.top .stage-tag{margin-left:auto;font-size:11.5px;font-weight:700;color:#0e1018;background:var(--warn);padding:4px 10px;border-radius:20px;letter-spacing:.3px;}
+.wrap{max-width:1360px;margin:0 auto;padding:22px 20px;}
+h2{font-size:18px;font-weight:700;margin-bottom:4px;}
+.subtitle{color:var(--muted);font-size:12.5px;margin-bottom:18px;}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin-bottom:18px;}
+.card h3{font-size:13.5px;font-weight:700;margin-bottom:12px;color:var(--text);display:flex;align-items:center;gap:8px;}
+.card h3 svg{width:16px;height:16px;color:var(--accent);}
+
+.drop-zone{border:2px dashed var(--border);border-radius:10px;padding:26px;text-align:center;cursor:pointer;transition:border-color .15s, background .15s;color:var(--muted);}
+.drop-zone:hover,.drop-zone.drag{border-color:var(--accent);background:rgba(70,130,210,.06);}
+.drop-zone svg{width:30px;height:30px;margin-bottom:8px;color:var(--accent);}
+.drop-zone p{font-size:13px;}
+.file-chip-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;}
+.file-chip{background:var(--panel3);border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11.5px;color:var(--text);}
+
+.item-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-bottom:4px;}
+.item-check{display:flex;align-items:center;gap:8px;background:var(--panel3);border:1px solid var(--border);border-radius:7px;padding:8px 10px;font-size:12.5px;}
+.item-check input{accent-color:var(--accent);width:15px;height:15px;}
+.item-check .swatch{width:11px;height:11px;border-radius:3px;display:inline-block;}
+
+.adv-toggle{font-size:12px;color:var(--accent);cursor:pointer;user-select:none;display:inline-flex;align-items:center;gap:4px;margin-top:6px;}
+.adv-panel{display:none;margin-top:14px;padding-top:14px;border-top:1px dashed var(--border);}
+.adv-panel.open{display:block;}
+.adv-row{display:grid;grid-template-columns:110px 1fr 90px 90px;gap:8px;align-items:center;font-size:12px;margin-bottom:6px;color:var(--muted);}
+.adv-row input{background:var(--panel3);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:5px 7px;font-size:12px;width:100%;}
+.adv-row .lab{color:var(--text);font-weight:600;}
+.grid-side-row{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:12.5px;}
+.grid-side-row input{width:70px;background:var(--panel3);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:5px 7px;}
+
+.btn{display:inline-flex;align-items:center;gap:7px;background:var(--accent);color:#fff;border:none;border-radius:7px;padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;transition:filter .1s;}
+.btn svg{width:15px;height:15px;}
+.btn:hover{filter:brightness(1.1);}
+.btn:disabled{opacity:.4;cursor:default;}
+.btn.green{background:var(--ok);}
+.btn.grey{background:#4a5268;}
+.btn.purple{background:#7c5cbf;}
+.btn.outline{background:transparent;border:1px solid var(--border);color:var(--text);}
+.controls{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;}
+
+.log-area{margin-top:14px;background:#0c0e14;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-family:Consolas,monospace;font-size:11.5px;max-height:150px;overflow-y:auto;color:#9aa4bd;}
+
+.summary-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:6px;}
+.stat{background:var(--panel3);border:1px solid var(--border);border-radius:8px;padding:12px 14px;}
+.stat .num{font-size:22px;font-weight:800;color:var(--text);}
+.stat .num.warn{color:var(--warn);}
+.stat .num.bad{color:var(--bad);}
+.stat .lab{font-size:11px;color:var(--muted);margin-top:2px;}
+.item-bar-row{display:flex;align-items:center;gap:10px;font-size:12px;margin-top:8px;}
+.item-bar-row .name{width:80px;color:var(--muted);flex:0 0 auto;}
+.item-bar-track{flex:1;height:8px;background:#0c0e14;border-radius:4px;overflow:hidden;}
+.item-bar-fill{height:100%;border-radius:4px;}
+.item-bar-row .val{width:90px;text-align:right;color:var(--text);flex:0 0 auto;font-variant-numeric:tabular-nums;}
+
+table.strip-table{width:100%;border-collapse:collapse;font-size:12.2px;}
+table.strip-table th{background:#0e1018;color:var(--muted);font-weight:700;text-align:left;padding:8px 8px;position:sticky;top:56px;border-bottom:1px solid var(--border);white-space:nowrap;}
+table.strip-table td{padding:7px 8px;border-bottom:1px solid #262b3a;white-space:nowrap;}
+table.strip-table tr:hover td{background:rgba(70,130,210,.06);}
+.yield-good{color:var(--ok);font-weight:700;}
+.yield-warn{color:var(--warn);font-weight:700;}
+.yield-bad{color:var(--bad);font-weight:700;}
+.chip{display:inline-block;padding:1px 7px;border-radius:20px;font-size:10.5px;font-weight:700;color:#0e1018;}
+.tbl-scroll{max-height:560px;overflow:auto;border:1px solid var(--border);border-radius:8px;}
+select.label-select{background:var(--panel3);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:4px 6px;font-size:11.5px;}
+.mini-btn{background:var(--panel3);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:4px 9px;font-size:11px;cursor:pointer;}
+.mini-btn:hover{border-color:var(--accent);color:var(--accent);}
+
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(6,7,12,.72);z-index:1000;align-items:center;justify-content:center;padding:20px;}
+.modal-overlay.open{display:flex;}
+.modal-box{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:22px;max-width:900px;width:100%;max-height:90vh;overflow:auto;position:relative;}
+.modal-close{position:absolute;top:14px;right:16px;background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;}
+.modal-close:hover{color:var(--text);}
+#hmTitle{font-size:15px;font-weight:700;margin-bottom:4px;}
+#hmSub{font-size:12px;color:var(--muted);margin-bottom:14px;}
+.hm-grid{display:inline-grid;gap:2px;background:#0c0e14;padding:8px;border-radius:8px;}
+.hm-cell{width:26px;height:26px;border-radius:3px;font-size:8.5px;display:flex;align-items:center;justify-content:center;color:#0e1018;font-weight:700;position:relative;cursor:default;}
+.hm-cell.nodata{background:var(--c-nodata);color:#555;}
+.hm-cell .dot{position:absolute;top:1px;right:1px;width:5px;height:5px;border-radius:50%;background:#fff;box-shadow:0 0 0 1px #000;}
+.legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:14px;font-size:11.5px;}
+.legend .sw{display:inline-flex;align-items:center;gap:5px;}
+.legend .sw i{width:12px;height:12px;border-radius:3px;display:inline-block;}
+.feature-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px 16px;margin-top:16px;font-size:12px;}
+.feature-list div span.k{color:var(--muted);}
+.feature-list div span.v{color:var(--text);font-weight:700;float:right;}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="logo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
+    </svg>
+    Strip Test Fail Pattern AI
+  </div>
+  <div class="stage-tag">STAGE 1 · 資料蒐集 (Dataset Builder)</div>
+</header>
+
+<div class="wrap">
+  <h2>Strip Test Defect Fail Pattern — Dataset 蒐集工具</h2>
+  <div class="subtitle">目標測試項：VTH／VFSD／IPD-10V／IDSS1～IDSS3（其他測試項暫不納入判定）。輸出 die-level 與 strip-level 資料集，供 Stage 2 fail pattern 歸類模型訓練使用。</div>
+
+  <!-- Upload -->
+  <div class="card">
+    <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 21h16"/></svg>上傳測試 Log</h3>
+    <div class="drop-zone" id="dropZone">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h16v16H4z" opacity="0"/><path d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9z"/><path d="M14 3v6h6"/></svg>
+      <p>拖曳 .xls / .xlsx / .zip（內含 xls）至此，或點擊選取檔案</p>
+      <input type="file" id="fileInput" multiple accept=".xls,.xlsx,.zip" style="display:none">
+    </div>
+    <div class="file-chip-row" id="fileChipRow"></div>
+  </div>
+
+  <!-- Config -->
+  <div class="card">
+    <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.6 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.6a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>判定測試項設定</h3>
+    <div class="item-grid" id="itemGrid"></div>
+    <div class="adv-toggle" id="advToggle">▸ 進階設定（Grid 尺寸 / 手動覆寫 Spec Limit）</div>
+    <div class="adv-panel" id="advPanel">
+      <div class="grid-side-row">
+        <span>Strip Grid 邊長（每 slot 顆數 = 邊長²）：</span>
+        <input type="number" id="gridSide" value="13" min="2" max="60">
+        <span style="color:var(--muted)">預設 13 → 169 顆/slot（依 UNITS_PER_SLOT 換算，可依實際產品調整）</span>
+      </div>
+      <div style="margin-top:12px;font-size:12px;color:var(--muted)">下方留空 = 使用檔案內 Min/Max Limit 列自動判讀；填入數值則覆寫全部檔案。</div>
+      <div class="adv-row" style="margin-top:10px;color:var(--text);font-weight:700;"><span>測試項</span><span></span><span>Min</span><span>Max</span></div>
+      <div id="limitRows"></div>
+    </div>
+    <div class="controls">
+      <button class="btn" id="btnProcess" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> 解析並建立 Dataset
+      </button>
+      <button class="btn outline" id="btnImportJson">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg> 匯入既有 Dataset JSON（續標記）
+      </button>
+      <input type="file" id="jsonInput" accept=".json" style="display:none">
+    </div>
+    <div class="log-area" id="logArea">準備就緒...</div>
+  </div>
+
+  <!-- Summary -->
+  <div class="card" id="summaryCard" style="display:none;">
+    <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg>總覽</h3>
+    <div class="summary-cards" id="summaryCards"></div>
+    <div id="itemBars" style="margin-top:14px;"></div>
+  </div>
+
+  <!-- Results -->
+  <div class="card" id="resultCard" style="display:none;">
+    <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Strip-Level 資料集（每列 = 一個 strip / slot，即一個 fail pattern 樣本）</h3>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">點擊「Heatmap」預覽該 strip 的空間分布，並可於 Pattern Label 手動標記類別，供 Stage 2 監督式訓練使用。</div>
+    <div class="tbl-scroll">
+      <table class="strip-table" id="stripTable">
+        <thead><tr id="stripTableHead"></tr></thead>
+        <tbody id="stripTableBody"></tbody>
+      </table>
+    </div>
+    <div class="controls">
+      <button class="btn green" id="btnExportStripCsv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg> 匯出 Strip-Level 特徵 CSV</button>
+      <button class="btn grey" id="btnExportDieCsv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg> 匯出 Die-Level 原始 CSV</button>
+      <button class="btn purple" id="btnExportJson"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg> 匯出完整 Dataset JSON（含 Grid + Label，供 Stage 2 訓練）</button>
+    </div>
+  </div>
+</div>
+
+<!-- Heatmap Modal -->
+<div class="modal-overlay" id="hmModal">
+  <div class="modal-box">
+    <button class="modal-close" id="hmClose">✕</button>
+    <div id="hmTitle"></div>
+    <div id="hmSub"></div>
+    <div id="hmGridWrap" style="overflow:auto;"></div>
+    <div class="legend" id="hmLegend"></div>
+    <div class="feature-list" id="hmFeatures"></div>
+  </div>
+</div>
+
+<script>
+lucide.createIcons();
+
+// ══════════════════════════════════════════════════════════════
+// CONSTANTS
+// ══════════════════════════════════════════════════════════════
+const TARGET_SHEET = "LoggerData";
+const ROW_MIN = 3, ROW_MAX = 4, ROW_HEADER = 9, ROW_DATA = 10;
+
+// display name -> column name used in LoggerData header row
+const ITEM_DEFS = [
+  {key:"VTH",     col:"VTH",     color:"var(--c-vth)",   defMin:1.5,  defMax:6.0},
+  {key:"VFSD",    col:"VFSD",    color:"var(--c-vfsd)",  defMin:0.4,  defMax:0.9},
+  {key:"IPD_10V", col:"IPD-10V", color:"var(--c-ipd)",   defMin:20.0, defMax:40.0},
+  {key:"IDSS1",   col:"IDSS1",   color:"var(--c-idss1)", defMin:0.0,  defMax:10.0},
+  {key:"IDSS2",   col:"IDSS2",   color:"var(--c-idss2)", defMin:0.0,  defMax:10.0},
+  {key:"IDSS3",   col:"IDSS3",   color:"var(--c-idss3)", defMin:0.0,  defMax:10.0},
+];
+const ITEM_KEYS = ITEM_DEFS.map(i=>i.key);
+const ITEM_COLOR = Object.fromEntries(ITEM_DEFS.map(i=>[i.key,i.color]));
+
+const LABEL_OPTIONS = ["","None / No Fail","Random / Scatter","Edge-Ring","Corner","Center",
+  "Row-Streak","Column-Streak","Cluster","Full-Fail","Other"];
+
+// ══════════════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════════════
+let pickedFiles = [];
+let strips = [];       // array of strip objects (the dataset rows)
+let activeItems = new Set(ITEM_KEYS);
+let manualLimits = {}; // key -> {min,max} override (blank = use file limits)
+let gridSideCfg = 13;
+
+// ══════════════════════════════════════════════════════════════
+// UI: item checkboxes + limit override rows
+// ══════════════════════════════════════════════════════════════
+const itemGrid = document.getElementById('itemGrid');
+ITEM_DEFS.forEach(it=>{
+  const row = document.createElement('label');
+  row.className='item-check';
+  row.innerHTML = `<input type="checkbox" data-key="${it.key}" checked>
+    <span class="swatch" style="background:${it.color}"></span> ${it.key}`;
+  itemGrid.appendChild(row);
+});
+itemGrid.addEventListener('change', e=>{
+  if(e.target.matches('input[type="checkbox"]')){
+    const k=e.target.dataset.key;
+    if(e.target.checked)activeItems.add(k);else activeItems.delete(k);
+  }
+});
+
+const limitRowsEl = document.getElementById('limitRows');
+ITEM_DEFS.forEach(it=>{
+  const row=document.createElement('div');
+  row.className='adv-row';
+  row.innerHTML=`<span class="lab">${it.key}</span><span style="color:var(--muted)">(${it.col})</span>
+    <input type="number" step="any" placeholder="min" data-key="${it.key}" data-bound="min">
+    <input type="number" step="any" placeholder="max" data-key="${it.key}" data-bound="max">`;
+  limitRowsEl.appendChild(row);
+});
+limitRowsEl.addEventListener('input', e=>{
+  const k=e.target.dataset.key, b=e.target.dataset.bound;
+  if(!k)return;
+  if(!manualLimits[k])manualLimits[k]={min:null,max:null};
+  const v=e.target.value.trim();
+  manualLimits[k][b]=v===""?null:Number(v);
+});
+
+document.getElementById('advToggle').onclick=()=>{
+  const p=document.getElementById('advPanel');
+  p.classList.toggle('open');
+  document.getElementById('advToggle').textContent=(p.classList.contains('open')?'▾':'▸')+' 進階設定（Grid 尺寸 / 手動覆寫 Spec Limit）';
+};
+document.getElementById('gridSide').addEventListener('change', e=>{
+  const v=parseInt(e.target.value,10);
+  gridSideCfg = Number.isFinite(v)&&v>1?v:13;
+});
+
+// ══════════════════════════════════════════════════════════════
+// FILE PICKING
+// ══════════════════════════════════════════════════════════════
+const dropZone=document.getElementById('dropZone');
+const fileInput=document.getElementById('fileInput');
+dropZone.onclick=()=>fileInput.click();
+fileInput.onchange=()=>onFiles(fileInput.files);
+dropZone.ondragover=e=>{e.preventDefault();dropZone.classList.add('drag');};
+dropZone.ondragleave=()=>dropZone.classList.remove('drag');
+dropZone.ondrop=e=>{e.preventDefault();dropZone.classList.remove('drag');onFiles(e.dataTransfer.files);};
+
+function onFiles(fileList){
+  pickedFiles=[...fileList];
+  const row=document.getElementById('fileChipRow');
+  row.innerHTML='';
+  pickedFiles.forEach(f=>{
+    const c=document.createElement('div');
+    c.className='file-chip';
+    c.textContent=`${f.name} (${(f.size/1024).toFixed(0)} KB)`;
+    row.appendChild(c);
+  });
+  document.getElementById('btnProcess').disabled = pickedFiles.length===0;
+  addLog(`已選取 ${pickedFiles.length} 個檔案`);
+}
+
+function addLog(msg,isError=false){
+  const d=document.createElement('div');
+  if(isError)d.style.color="#ff6b6b";
+  d.textContent=`[${new Date().toLocaleTimeString()}] ${msg}`;
+  const area=document.getElementById('logArea');
+  area.appendChild(d);area.scrollTop=area.scrollHeight;
+}
+
+// ══════════════════════════════════════════════════════════════
+// FILE / ZIP HELPERS
+// ══════════════════════════════════════════════════════════════
+function isExcelFile(n){return/\.(xls|xlsx)$/i.test(n);}
+function isZipFile(n){return/\.zip$/i.test(n);}
+function baseName(n){return n.replace(/^.*[\\\/]/,'').replace(/\.(xls|xlsx)$/i,'');}
+function getSheetName(wb,target){return wb.SheetNames.find(s=>s.trim().toLowerCase()===target.toLowerCase())||null;}
+function parseLimit(raw){if(raw===null||raw===undefined)return null;const m=String(raw).trim().match(/[-+]?\d*\.?\d+/);return m?Number(m[0]):null;}
+function toNumber(raw){if(raw===null||raw===undefined||raw==="")return null;if(typeof raw==="number")return Number.isFinite(raw)?raw:null;const n=Number(String(raw).trim().replace(/,/g,""));return Number.isFinite(n)?n:null;}
+function extractSlot(remark){if(remark===null||remark===undefined)return null;const parts=String(remark).trim().split(/\s+/).filter(Boolean);if(parts.length<2)return null;const code=parts[parts.length-1];if(code.length<2)return null;const n=parseInt(code.slice(-2),10);return Number.isFinite(n)?n:null;}
+
+async function collectExcelEntries(inputFiles){
+  const entries=[];
+  for(const file of inputFiles){
+    if(isExcelFile(file.name)){entries.push({name:file.name,data:await file.arrayBuffer()});continue;}
+    if(isZipFile(file.name)){
+      if(typeof JSZip==="undefined")throw new Error("JSZip not loaded.");
+      const zip=await JSZip.loadAsync(await file.arrayBuffer());
+      const names=Object.keys(zip.files).filter(n=>!zip.files[n].dir&&isExcelFile(n));
+      if(!names.length)addLog(`跳過 [${file.name}]: zip 內沒有 xls/xlsx`,true);
+      for(const n of names){entries.push({name:n,data:await zip.files[n].async("arraybuffer")});}
+      continue;
+    }
+    addLog(`跳過 [${file.name}]: 不支援的檔案類型`,true);
+  }
+  return entries;
+}
+
+// ══════════════════════════════════════════════════════════════
+// CORE PARSER — LoggerData -> die records -> strips (grouped by slot)
+// ══════════════════════════════════════════════════════════════
+function resolveLimits(colIdx, minRow, maxRow){
+  const limits={};
+  ITEM_DEFS.forEach(it=>{
+    const ci=colIdx(it.col);
+    let min = ci!==undefined ? parseLimit(minRow[ci]) : null;
+    let max = ci!==undefined ? parseLimit(maxRow[ci]) : null;
+    if(min===null) min = it.defMin;
+    if(max===null) max = it.defMax;
+    const override = manualLimits[it.key];
+    if(override){
+      if(override.min!==null && override.min!==undefined) min=override.min;
+      if(override.max!==null && override.max!==undefined) max=override.max;
+    }
+    limits[it.key]={min,max};
+  });
+  return limits;
+}
+
+function parseWorkbookToStrips(entry, gridSide){
+  const wb=XLSX.read(entry.data,{type:'array',cellDates:false});
+  const sheetName=getSheetName(wb,TARGET_SHEET);
+  if(!sheetName)throw new Error(`Sheet '${TARGET_SHEET}' not found.`);
+  const rows=XLSX.utils.sheet_to_json(wb.Sheets[sheetName],{header:1,defval:""});
+  if(rows.length<=ROW_HEADER)throw new Error("Insufficient rows.");
+  const headers=rows[ROW_HEADER].map(h=>String(h).trim());
+  const col={};
+  headers.forEach((h,i)=>{if(h&&col[h.toLowerCase()]===undefined)col[h.toLowerCase()]=i;});
+  const colIdx=name=>col[name.toLowerCase()];
+
+  const xCol=colIdx("X"), remarkCol=colIdx("Remark"), serialCol=colIdx("Serial"), binCol=colIdx("Bin");
+  if(xCol===undefined || remarkCol===undefined) throw new Error("缺少 X 或 Remark 欄位，無法定位 slot / 座標。");
+
+  const itemCols={};
+  ITEM_DEFS.forEach(it=>{ const ci=colIdx(it.col); if(ci!==undefined) itemCols[it.key]=ci; });
+
+  const limits = resolveLimits(colIdx, rows[ROW_MIN]||[], rows[ROW_MAX]||[]);
+  const lot = baseName(entry.name);
+
+  const stripMap = new Map(); // slot -> strip obj
+
+  for(let r=ROW_DATA;r<rows.length;r++){
+    const row=rows[r]||[];
+    if(String(row[0]??"").trim()==="")break;
+    const remark = row[remarkCol];
+    const slot = extractSlot(remark);
+    if(slot===null) continue;
+    const xOld = toNumber(row[xCol]);
+    if(xOld===null || xOld<=0) continue;
+    const x = Math.trunc((xOld + gridSide - 1) / gridSide);
+    const y = gridSide - ((xOld - 1) % gridSide);
+
+    const values={}, fails={};
+    let anyFail=false, failCount=0;
+    ITEM_DEFS.forEach(it=>{
+      if(!activeItems.has(it.key)) return;
+      const ci=itemCols[it.key];
+      const val = ci!==undefined ? toNumber(row[ci]) : null;
+      values[it.key]=val;
+      const lim=limits[it.key];
+      const failed = val===null || (lim.min!==null && val<lim.min) || (lim.max!==null && val>lim.max);
+      fails[it.key]=failed;
+      if(failed){anyFail=true;failCount++;}
+    });
+
+    const die={
+      serial: serialCol!==undefined ? row[serialCol] : (r-ROW_DATA+1),
+      x, y, xOld,
+      values, fails, anyFail, failCount,
+      binOriginal: binCol!==undefined ? row[binCol] : null
+    };
+
+    if(!stripMap.has(slot)){
+      stripMap.set(slot, {
+        lot, slot, fileName: entry.name.replace(/^.*[\\\/]/,''),
+        limits, gridSide, dies: []
+      });
+    }
+    stripMap.get(slot).dies.push(die);
+  }
+
+  return [...stripMap.values()];
+}
+
+// ══════════════════════════════════════════════════════════════
+// FEATURE ENGINEERING (per strip)
+// ══════════════════════════════════════════════════════════════
+function computeStripFeatures(strip){
+  const G = strip.gridSide;
+  const dieMap = new Map();
+  strip.dies.forEach(d=>dieMap.set(`${d.x},${d.y}`, d));
+
+  const totalDies = strip.dies.length;
+  const failDies = strip.dies.filter(d=>d.anyFail);
+  const failCount = failDies.length;
+
+  const itemFailCount={}, itemFailRate={};
+  ITEM_DEFS.forEach(it=>{
+    if(!activeItems.has(it.key)){itemFailCount[it.key]=0;itemFailRate[it.key]=0;return;}
+    const c = strip.dies.filter(d=>d.fails[it.key]).length;
+    itemFailCount[it.key]=c;
+    itemFailRate[it.key]= totalDies>0 ? c/totalDies : 0;
+  });
+  let dominantItem="None", dominantMax=0;
+  ITEM_DEFS.forEach(it=>{ if(activeItems.has(it.key) && itemFailCount[it.key]>dominantMax){dominantMax=itemFailCount[it.key];dominantItem=it.key;} });
+  if(dominantMax===0) dominantItem="None";
+
+  // border / interior
+  let borderTotal=0, borderFail=0, interiorTotal=0, interiorFail=0;
+  strip.dies.forEach(d=>{
+    const isBorder = d.x===1||d.x===G||d.y===1||d.y===G;
+    if(isBorder){borderTotal++; if(d.anyFail)borderFail++;}
+    else{interiorTotal++; if(d.anyFail)interiorFail++;}
+  });
+  const edgeFailRatio = borderTotal>0? borderFail/borderTotal : 0;
+  const interiorFailRatio = interiorTotal>0? interiorFail/interiorTotal : 0;
+
+  // center region (inner third)
+  const margin = Math.max(1, Math.floor(G/3));
+  const lo = margin+1, hi = G-margin;
+  let centerTotal=0, centerFail=0;
+  strip.dies.forEach(d=>{
+    if(d.x>=lo && d.x<=hi && d.y>=lo && d.y<=hi){ centerTotal++; if(d.anyFail)centerFail++; }
+  });
+  const centerFailRatio = centerTotal>0? centerFail/centerTotal : 0;
+
+  // row / column streak detection
+  const rowTotal={}, rowFail={}, colTotal={}, colFail={};
+  strip.dies.forEach(d=>{
+    rowTotal[d.y]=(rowTotal[d.y]||0)+1; if(d.anyFail)rowFail[d.y]=(rowFail[d.y]||0)+1;
+    colTotal[d.x]=(colTotal[d.x]||0)+1; if(d.anyFail)colFail[d.x]=(colFail[d.x]||0)+1;
+  });
+  let maxRowFailFrac=0, maxColFailFrac=0;
+  Object.keys(rowTotal).forEach(y=>{ const f=(rowFail[y]||0)/rowTotal[y]; if(f>maxRowFailFrac)maxRowFailFrac=f; });
+  Object.keys(colTotal).forEach(x=>{ const f=(colFail[x]||0)/colTotal[x]; if(f>maxColFailFrac)maxColFailFrac=f; });
+
+  // 8-neighbor clustering score
+  const NB=[-1,0,1];
+  let clustered=0;
+  failDies.forEach(d=>{
+    let hasFailNeighbor=false;
+    for(const dx of NB)for(const dy of NB){
+      if(dx===0&&dy===0)continue;
+      const n=dieMap.get(`${d.x+dx},${d.y+dy}`);
+      if(n && n.anyFail){hasFailNeighbor=true;break;}
+    }
+    if(hasFailNeighbor)clustered++;
+  });
+  const clusterScore = failCount>0 ? clustered/failCount : 0;
+
+  // bounding box density of fails
+  let bboxDensity=0, bboxW=0, bboxH=0;
+  if(failCount>0){
+    const xs=failDies.map(d=>d.x), ys=failDies.map(d=>d.y);
+    const minX=Math.min(...xs), maxX=Math.max(...xs), minY=Math.min(...ys), maxY=Math.max(...ys);
+    bboxW=maxX-minX+1; bboxH=maxY-minY+1;
+    const area=bboxW*bboxH;
+    bboxDensity = area>0 ? failCount/area : 0;
+  }
+
+  // quadrant distribution
+  const cx=(1+G)/2, cy=(1+G)/2;
+  const quad={TL:0,TR:0,BL:0,BR:0};
+  failDies.forEach(d=>{
+    const key=(d.x<cx?"L":"R")+(d.y<cy?"B":"T");
+    if(key==="LT")quad.TL++; else if(key==="RT")quad.TR++; else if(key==="LB")quad.BL++; else quad.BR++;
+  });
+  let dominantQuadrant="None", qMax=0;
+  Object.entries(quad).forEach(([k,v])=>{if(v>qMax){qMax=v;dominantQuadrant=k;}});
+  if(failCount===0)dominantQuadrant="None";
+
+  return{
+    totalDies, failDies:failCount, yield: totalDies>0?(totalDies-failCount)/totalDies:0,
+    itemFailCount, itemFailRate, dominantItem,
+    edgeFailRatio, interiorFailRatio, centerFailRatio,
+    maxRowFailFrac, maxColFailFrac, clusterScore,
+    bboxDensity, bboxW, bboxH,
+    quadrant: quad, dominantQuadrant
+  };
+}
+
+// priority order for single-code grid rendering when a die fails multiple items
+function pickPrimaryFailItem(die){
+  for(const it of ITEM_DEFS){ if(activeItems.has(it.key) && die.fails[it.key]) return it.key; }
+  return null;
+}
+
+// ══════════════════════════════════════════════════════════════
+// PROCESS BUTTON
+// ══════════════════════════════════════════════════════════════
+document.getElementById('btnProcess').onclick=async()=>{
+  strips=[];
+  document.getElementById('summaryCard').style.display='none';
+  document.getElementById('resultCard').style.display='none';
+  let entries=[];
+  try{ entries=await collectExcelEntries(pickedFiles); }
+  catch(err){ addLog(`讀取失敗: ${err.message}`,true); return; }
+
+  const gridSide = gridSideCfg;
+  for(const entry of entries){
+    try{
+      const stripList = parseWorkbookToStrips(entry, gridSide);
+      stripList.forEach(s=>{
+        s.features = computeStripFeatures(s);
+        s.manualLabel = "";
+        s.key = `${s.lot}__slot${String(s.slot).padStart(2,'0')}`;
+      });
+      strips.push(...stripList);
+      addLog(`成功: ${entry.name} → ${stripList.length} strips, ${stripList.reduce((a,s)=>a+s.dies.length,0)} dies`);
+    }catch(err){
+      addLog(`錯誤 [${entry.name}]: ${err.message}`,true);
+    }
+  }
+  strips.sort((a,b)=> a.lot.localeCompare(b.lot,undefined,{sensitivity:'base'}) || a.slot-b.slot);
+  if(strips.length===0){ addLog('沒有成功解析任何 strip。',true); return; }
+  renderSummary();
+  renderStripTable();
+};
+
+// ══════════════════════════════════════════════════════════════
+// RENDER: SUMMARY
+// ══════════════════════════════════════════════════════════════
+function renderSummary(){
+  const card=document.getElementById('summaryCard');
+  card.style.display='block';
+  const lots=new Set(strips.map(s=>s.lot));
+  const totalDies=strips.reduce((a,s)=>a+s.features.totalDies,0);
+  const totalFail=strips.reduce((a,s)=>a+s.features.failDies,0);
+  const yieldPct= totalDies>0 ? (1-totalFail/totalDies)*100 : 0;
+
+  const cards=document.getElementById('summaryCards');
+  cards.innerHTML=`
+    <div class="stat"><div class="num">${lots.size}</div><div class="lab">Lot 檔案數</div></div>
+    <div class="stat"><div class="num">${strips.length}</div><div class="lab">Strip / Slot 樣本數</div></div>
+    <div class="stat"><div class="num">${totalDies.toLocaleString()}</div><div class="lab">Die 總數</div></div>
+    <div class="stat"><div class="num ${yieldPct<90?'bad':yieldPct<98?'warn':''}">${yieldPct.toFixed(2)}%</div><div class="lab">整體良率</div></div>
+    <div class="stat"><div class="num bad">${totalFail.toLocaleString()}</div><div class="lab">Fail Die 總數</div></div>
+  `;
+
+  const maxRate = Math.max(0.0001, ...ITEM_DEFS.map(it=> totalDies>0 ? strips.reduce((a,s)=>a+s.features.itemFailCount[it.key],0)/totalDies : 0));
+  const bars=document.getElementById('itemBars');
+  bars.innerHTML='';
+  ITEM_DEFS.forEach(it=>{
+    if(!activeItems.has(it.key))return;
+    const cnt = strips.reduce((a,s)=>a+s.features.itemFailCount[it.key],0);
+    const rate = totalDies>0? cnt/totalDies : 0;
+    const row=document.createElement('div');
+    row.className='item-bar-row';
+    row.innerHTML=`<div class="name">${it.key}</div>
+      <div class="item-bar-track"><div class="item-bar-fill" style="width:${(rate/maxRate*100).toFixed(1)}%;background:${it.color}"></div></div>
+      <div class="val">${cnt.toLocaleString()} (${(rate*100).toFixed(3)}%)</div>`;
+    bars.appendChild(row);
+  });
+}
+
+// ══════════════════════════════════════════════════════════════
+// RENDER: STRIP TABLE
+// ══════════════════════════════════════════════════════════════
+function yieldClass(y){ if(y<0.90)return'yield-bad'; if(y<0.98)return'yield-warn'; return'yield-good'; }
+
+function renderStripTable(){
+  const card=document.getElementById('resultCard');
+  card.style.display='block';
+
+  const head=document.getElementById('stripTableHead');
+  const activeList = ITEM_DEFS.filter(it=>activeItems.has(it.key));
+  head.innerHTML = `<th>Lot</th><th>Slot</th><th>Dies</th><th>Fail</th><th>Yield</th>` +
+    activeList.map(it=>`<th>${it.key} Fail</th>`).join('') +
+    `<th>Dominant</th><th>Edge Fail%</th><th>Cluster</th><th>Row/Col Streak</th><th>Pattern Label</th><th>Heatmap</th>`;
+
+  const body=document.getElementById('stripTableBody');
+  body.innerHTML='';
+  strips.forEach((s,idx)=>{
+    const f=s.features;
+    const tr=document.createElement('tr');
+    tr.innerHTML = `<td>${s.lot}</td><td>${String(s.slot).padStart(2,'0')}</td>
+      <td>${f.totalDies}</td><td>${f.failDies}</td>
+      <td class="${yieldClass(f.yield)}">${(f.yield*100).toFixed(2)}%</td>` +
+      activeList.map(it=>`<td>${f.itemFailCount[it.key]}</td>`).join('') +
+      `<td><span class="chip" style="background:${f.dominantItem==='None'?'#3a4258':ITEM_COLOR[f.dominantItem]}">${f.dominantItem}</span></td>
+      <td>${(f.edgeFailRatio*100).toFixed(1)}%</td>
+      <td>${(f.clusterScore*100).toFixed(0)}%</td>
+      <td>${(Math.max(f.maxRowFailFrac,f.maxColFailFrac)*100).toFixed(0)}%</td>
+      <td></td>
+      <td><button class="mini-btn" data-idx="${idx}">🔥 View</button></td>`;
+    // label select
+    const labelTd = tr.children[tr.children.length-2];
+    const sel=document.createElement('select');
+    sel.className='label-select';
+    LABEL_OPTIONS.forEach(opt=>{
+      const o=document.createElement('option'); o.value=opt; o.textContent=opt||'(未標記)';
+      if(opt===s.manualLabel)o.selected=true;
+      sel.appendChild(o);
+    });
+    sel.onchange=()=>{ s.manualLabel=sel.value; };
+    labelTd.appendChild(sel);
+    body.appendChild(tr);
+  });
+  body.querySelectorAll('button[data-idx]').forEach(btn=>{
+    btn.onclick=()=>openHeatmap(parseInt(btn.dataset.idx,10));
+  });
+}
+
+// ══════════════════════════════════════════════════════════════
+// HEATMAP MODAL
+// ══════════════════════════════════════════════════════════════
+function openHeatmap(idx){
+  const s=strips[idx];
+  const f=s.features;
+  const G=s.gridSide;
+  document.getElementById('hmTitle').textContent = `${s.lot} — Slot ${String(s.slot).padStart(2,'0')}`;
+  document.getElementById('hmSub').textContent = `${f.totalDies} dies, ${f.failDies} fail (${(f.yield*100).toFixed(2)}% yield) · Dominant: ${f.dominantItem}`;
+
+  const dieMap=new Map();
+  s.dies.forEach(d=>dieMap.set(`${d.x},${d.y}`, d));
+
+  const wrap=document.getElementById('hmGridWrap');
+  wrap.innerHTML='';
+  const grid=document.createElement('div');
+  grid.className='hm-grid';
+  grid.style.gridTemplateColumns=`repeat(${G}, 26px)`;
+  for(let y=G; y>=1; y--){
+    for(let x=1; x<=G; x++){
+      const d=dieMap.get(`${x},${y}`);
+      const cell=document.createElement('div');
+      if(!d){
+        cell.className='hm-cell nodata';
+        cell.textContent='';
+        cell.title=`(${x},${y}) 無資料`;
+      }else{
+        cell.className='hm-cell';
+        const primary = d.anyFail ? pickPrimaryFailItem(d) : null;
+        cell.style.background = d.anyFail ? (ITEM_COLOR[primary]||'#888') : 'var(--c-pass)';
+        cell.textContent = d.anyFail ? primary.replace('IDSS','I').replace('IPD_10V','IPD').replace('VTH','V').replace('VFSD','F') : '';
+        const valLines = ITEM_DEFS.filter(it=>activeItems.has(it.key)).map(it=>{
+          const v=d.values[it.key];
+          const bad=d.fails[it.key];
+          return `${it.key}=${v===null?'—':v}${bad?' ✗':''}`;
+        }).join('\n');
+        cell.title = `(${x},${y}) Serial:${d.serial}\n${valLines}`;
+        if(d.failCount>1){
+          const dot=document.createElement('span'); dot.className='dot'; cell.appendChild(dot);
+        }
+      }
+      grid.appendChild(cell);
+    }
+  }
+  wrap.appendChild(grid);
+
+  const legend=document.getElementById('hmLegend');
+  legend.innerHTML = `<span class="sw"><i style="background:var(--c-pass)"></i>Pass</span>` +
+    ITEM_DEFS.filter(it=>activeItems.has(it.key)).map(it=>`<span class="sw"><i style="background:${it.color}"></i>${it.key} Fail</span>`).join('') +
+    `<span class="sw"><i style="background:var(--c-nodata)"></i>No Data</span>` +
+    `<span class="sw">● = 多測試項同時 Fail</span>`;
+
+  const feat=document.getElementById('hmFeatures');
+  feat.innerHTML = `
+    <div><span class="k">Edge Fail Ratio</span><span class="v">${(f.edgeFailRatio*100).toFixed(1)}%</span></div>
+    <div><span class="k">Interior Fail Ratio</span><span class="v">${(f.interiorFailRatio*100).toFixed(1)}%</span></div>
+    <div><span class="k">Center Fail Ratio</span><span class="v">${(f.centerFailRatio*100).toFixed(1)}%</span></div>
+    <div><span class="k">Max Row Streak</span><span class="v">${(f.maxRowFailFrac*100).toFixed(0)}%</span></div>
+    <div><span class="k">Max Col Streak</span><span class="v">${(f.maxColFailFrac*100).toFixed(0)}%</span></div>
+    <div><span class="k">Cluster Score</span><span class="v">${(f.clusterScore*100).toFixed(0)}%</span></div>
+    <div><span class="k">BBox Density</span><span class="v">${(f.bboxDensity*100).toFixed(0)}%</span></div>
+    <div><span class="k">BBox Size</span><span class="v">${f.bboxW}×${f.bboxH}</span></div>
+    <div><span class="k">Dominant Quadrant</span><span class="v">${f.dominantQuadrant}</span></div>
+  `;
+
+  document.getElementById('hmModal').classList.add('open');
+}
+document.getElementById('hmClose').onclick=()=>document.getElementById('hmModal').classList.remove('open');
+document.getElementById('hmModal').onclick=function(e){if(e.target===this)this.classList.remove('open');};
+
+// ══════════════════════════════════════════════════════════════
+// EXPORTS
+// ══════════════════════════════════════════════════════════════
+function csvEscape(v){
+  if(v===null||v===undefined)return"";
+  const s=String(v);
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s;
+}
+function downloadText(name,text,type){
+  const blob=new Blob([text],{type});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download=name; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1500);
+}
+function todayStr(){const d=new Date();const pad=n=>String(n).padStart(2,"0");return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}`;}
+
+document.getElementById('btnExportStripCsv').onclick=()=>{
+  const activeList=ITEM_DEFS.filter(it=>activeItems.has(it.key));
+  const headers=["Lot","Slot","TotalDies","FailDies","Yield",
+    ...activeList.flatMap(it=>[`${it.key}_FailCount`,`${it.key}_FailRate`]),
+    "DominantFailItem","EdgeFailRatio","InteriorFailRatio","CenterFailRatio",
+    "MaxRowFailFrac","MaxColFailFrac","ClusterScore","BBoxDensity","BBoxW","BBoxH",
+    "Quad_TL","Quad_TR","Quad_BL","Quad_BR","DominantQuadrant","ManualLabel"];
+  const lines=[headers.join(',')];
+  strips.forEach(s=>{
+    const f=s.features;
+    const row=[s.lot, s.slot, f.totalDies, f.failDies, f.yield.toFixed(4),
+      ...activeList.flatMap(it=>[f.itemFailCount[it.key], f.itemFailRate[it.key].toFixed(4)]),
+      f.dominantItem, f.edgeFailRatio.toFixed(4), f.interiorFailRatio.toFixed(4), f.centerFailRatio.toFixed(4),
+      f.maxRowFailFrac.toFixed(4), f.maxColFailFrac.toFixed(4), f.clusterScore.toFixed(4),
+      f.bboxDensity.toFixed(4), f.bboxW, f.bboxH,
+      f.quadrant.TL, f.quadrant.TR, f.quadrant.BL, f.quadrant.BR, f.dominantQuadrant,
+      s.manualLabel];
+    lines.push(row.map(csvEscape).join(','));
+  });
+  downloadText(`StripFailPattern_StripLevel_${todayStr()}.csv`, lines.join('\r\n'), 'text/csv');
+};
+
+document.getElementById('btnExportDieCsv').onclick=()=>{
+  const activeList=ITEM_DEFS.filter(it=>activeItems.has(it.key));
+  const headers=["Lot","Slot","Serial","X","Y",
+    ...activeList.map(it=>it.key),
+    ...activeList.map(it=>`${it.key}_Fail`),
+    "AnyFail","FailCount","BinOriginal","ManualLabel"];
+  const lines=[headers.join(',')];
+  strips.forEach(s=>{
+    s.dies.forEach(d=>{
+      const row=[s.lot, s.slot, d.serial, d.x, d.y,
+        ...activeList.map(it=>d.values[it.key]),
+        ...activeList.map(it=>d.fails[it.key]?1:0),
+        d.anyFail?1:0, d.failCount, d.binOriginal, s.manualLabel];
+      lines.push(row.map(csvEscape).join(','));
+    });
+  });
+  downloadText(`StripFailPattern_DieLevel_${todayStr()}.csv`, lines.join('\r\n'), 'text/csv');
+};
+
+document.getElementById('btnExportJson').onclick=()=>{
+  const activeList=ITEM_DEFS.filter(it=>activeItems.has(it.key)).map(it=>it.key);
+  const dataset = {
+    generatedAt: new Date().toISOString(),
+    stage: 1,
+    targetItems: activeList,
+    strips: strips.map(s=>{
+      const G=s.gridSide;
+      const dieMap=new Map(s.dies.map(d=>[`${d.x},${d.y}`, d]));
+      const grid=[]; // grid[row][col], row0 = y=G (top) down to y=1
+      for(let y=G;y>=1;y--){
+        const rowArr=[];
+        for(let x=1;x<=G;x++){
+          const d=dieMap.get(`${x},${y}`);
+          if(!d){ rowArr.push({s:"nodata"}); continue; }
+          if(!d.anyFail){ rowArr.push({s:"pass"}); continue; }
+          const primary=pickPrimaryFailItem(d);
+          rowArr.push({s:"fail", item:primary, multi: d.failCount>1, failItems: activeList.filter(k=>d.fails[k])});
+        }
+        grid.push(rowArr);
+      }
+      return {
+        lot: s.lot, slot: s.slot, key: s.key, gridSide: G,
+        limits: s.limits,
+        features: s.features,
+        manualLabel: s.manualLabel,
+        grid,
+        dies: s.dies.map(d=>({serial:d.serial,x:d.x,y:d.y,values:d.values,fails:d.fails,anyFail:d.anyFail,binOriginal:d.binOriginal}))
+      };
+    })
+  };
+  downloadText(`StripFailPattern_Dataset_${todayStr()}.json`, JSON.stringify(dataset), 'application/json');
+};
+
+// ── Import previously exported dataset JSON to resume labeling ──
+document.getElementById('btnImportJson').onclick=()=>document.getElementById('jsonInput').click();
+document.getElementById('jsonInput').onchange=async(e)=>{
+  const file=e.target.files[0];
+  if(!file)return;
+  try{
+    const text=await file.text();
+    const data=JSON.parse(text);
+    if(!data.strips)throw new Error("JSON 格式不正確，找不到 strips 陣列。");
+    strips = data.strips.map(s=>{
+      const G=s.gridSide;
+      const dies = s.dies.map(d=>({...d, failCount: Object.values(d.fails||{}).filter(Boolean).length}));
+      return { lot:s.lot, slot:s.slot, key:s.key, gridSide:G, limits:s.limits, dies,
+        features: s.features, manualLabel: s.manualLabel||"" };
+    });
+    // recompute active items from imported targetItems if present
+    if(Array.isArray(data.targetItems)){
+      activeItems = new Set(data.targetItems);
+      itemGrid.querySelectorAll('input[type="checkbox"]').forEach(cb=>{
+        cb.checked = activeItems.has(cb.dataset.key);
+      });
+    }
+    addLog(`已匯入 Dataset JSON：${strips.length} strips`);
+    renderSummary();
+    renderStripTable();
+  }catch(err){
+    addLog(`匯入失敗: ${err.message}`,true);
+  }
+};
+</script>
+</body>
+</html>
