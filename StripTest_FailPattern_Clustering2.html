@@ -1,0 +1,1915 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Strip Test Fail Pattern AI — Stage 1 + Stage 2 + Architecture</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+:root{
+  --bg: #12141c;
+  --panel: #1a1e2a;
+  --panel2: #202430;
+  --accent: #4682d2;
+  --text: #d7dceb;
+  --muted: #8a93ab;
+  --ok: #3cbe82;
+  --border: #37415a;
+  --warn: #e8a020;
+  --bad: #e5484d;
+  --panel3: #232838;
+  --c-vth: #e5484d;
+  --c-vfsd: #f2994a;
+  --c-ipd: #bb6bd9;
+  --c-idss1: #2ec4c4;
+  --c-idss2: #e0559e;
+  --c-idss3: #c9b458;
+  --c-getvthlo: #ff8787;
+  --c-getvthhi: #c0392b;
+  --c-bvdss1: #5b8def;
+  --c-bvdss2: #2f6fd6;
+  --c-delta3: #f5d76e;
+  --c-pass: #2e9e5b;
+  --c-nodata: #262b3a;
+  --m-rule: #8a93ab;
+  --m-knn: #4682d2;
+  --m-softmax: #7c5cbf;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:"Segoe UI","Microsoft JhengHei",sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:40px;}
+
+header.top{position:sticky;top:0;z-index:100;display:flex;align-items:center;gap:16px;height:56px;padding:0 22px;background:#0e1018;border-bottom:2px solid var(--border);}
+header.top .logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:15px;color:var(--accent);letter-spacing:.4px;white-space:nowrap;}
+header.top .logo svg{width:22px;height:22px;flex:0 0 auto;}
+header.top nav{display:flex;gap:6px;}
+header.top nav button{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:20px;padding:7px 16px;font-size:12.5px;font-weight:700;cursor:pointer;transition:all .12s;}
+header.top nav button:hover{border-color:var(--accent);color:var(--text);}
+header.top nav button.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+header.top nav button.active.arch{background:#7c5cbf;border-color:#7c5cbf;}
+header.top .ver{margin-left:auto;font-size:11px;color:var(--muted);white-space:nowrap;}
+.page{display:none;}
+.page.active{display:block;}
+
+.wrap{max-width:1400px;margin:0 auto;padding:22px 20px;}
+h2{font-size:18px;font-weight:700;margin-bottom:4px;}
+.subtitle{color:var(--muted);font-size:12.5px;margin-bottom:18px;}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin-bottom:18px;}
+.card h3{font-size:13.5px;font-weight:700;margin-bottom:12px;color:var(--text);}
+.card .hint{font-size:12px;color:var(--muted);margin-bottom:12px;}
+
+#page-stage1 header.top{
+  position:sticky; top:0; z-index:50;
+  display:flex; align-items:center; gap:12px;
+  height:56px; padding:0 22px; background:#0e1018; border-bottom:2px solid var(--border);
+}
+#page-stage1 header.top .logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:15px;color:var(--accent);letter-spacing:.4px;}
+#page-stage1 header.top .logo svg{width:22px;height:22px;}
+#page-stage1 header.top .stage-tag{margin-left:auto;font-size:11.5px;font-weight:700;color:#0e1018;background:var(--warn);padding:4px 10px;border-radius:20px;letter-spacing:.3px;}
+#page-stage1 .wrap{max-width:1360px;margin:0 auto;padding:22px 20px;}
+#page-stage1 h2{font-size:18px;font-weight:700;margin-bottom:4px;}
+#page-stage1 .subtitle{color:var(--muted);font-size:12.5px;margin-bottom:18px;}
+#page-stage1 .card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin-bottom:18px;}
+#page-stage1 .card h3{font-size:13.5px;font-weight:700;margin-bottom:12px;color:var(--text);display:flex;align-items:center;gap:8px;}
+#page-stage1 .card h3 svg{width:16px;height:16px;color:var(--accent);}
+#page-stage1 .drop-zone{border:2px dashed var(--border);border-radius:10px;padding:26px;text-align:center;cursor:pointer;transition:border-color .15s, background .15s;color:var(--muted);}
+#page-stage1 .drop-zone:hover, #page-stage1 .drop-zone.drag{border-color:var(--accent);background:rgba(70,130,210,.06);}
+#page-stage1 .drop-zone svg{width:30px;height:30px;margin-bottom:8px;color:var(--accent);}
+#page-stage1 .drop-zone p{font-size:13px;}
+#page-stage1 .file-chip-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;}
+#page-stage1 .file-chip{background:var(--panel3);border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11.5px;color:var(--text);}
+#page-stage1 .item-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-bottom:4px;}
+#page-stage1 .item-check{display:flex;align-items:center;gap:8px;background:var(--panel3);border:1px solid var(--border);border-radius:7px;padding:8px 10px;font-size:12.5px;}
+#page-stage1 .item-check input{accent-color:var(--accent);width:15px;height:15px;}
+#page-stage1 .item-check .swatch{width:11px;height:11px;border-radius:3px;display:inline-block;}
+#page-stage1 .adv-toggle{font-size:12px;color:var(--accent);cursor:pointer;user-select:none;display:inline-flex;align-items:center;gap:4px;margin-top:6px;}
+#page-stage1 .adv-panel{display:none;margin-top:14px;padding-top:14px;border-top:1px dashed var(--border);}
+#page-stage1 .adv-panel.open{display:block;}
+#page-stage1 .adv-row{display:grid;grid-template-columns:110px 1fr 90px 90px;gap:8px;align-items:center;font-size:12px;margin-bottom:6px;color:var(--muted);}
+#page-stage1 .adv-row input{background:var(--panel3);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:5px 7px;font-size:12px;width:100%;}
+#page-stage1 .adv-row .lab{color:var(--text);font-weight:600;}
+#page-stage1 .grid-side-row{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:12.5px;}
+#page-stage1 .grid-side-row input{width:70px;background:var(--panel3);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:5px 7px;}
+#page-stage1 .btn{display:inline-flex;align-items:center;gap:7px;background:var(--accent);color:#fff;border:none;border-radius:7px;padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;transition:filter .1s;}
+#page-stage1 .btn svg{width:15px;height:15px;}
+#page-stage1 .btn:hover{filter:brightness(1.1);}
+#page-stage1 .btn:disabled{opacity:.4;cursor:default;}
+#page-stage1 .btn.green{background:var(--ok);}
+#page-stage1 .btn.grey{background:#4a5268;}
+#page-stage1 .btn.purple{background:#7c5cbf;}
+#page-stage1 .btn.outline{background:transparent;border:1px solid var(--border);color:var(--text);}
+#page-stage1 .controls{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;}
+#page-stage1 .log-area{margin-top:14px;background:#0c0e14;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-family:Consolas,monospace;font-size:11.5px;max-height:150px;overflow-y:auto;color:#9aa4bd;}
+#page-stage1 .summary-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:6px;}
+#page-stage1 .stat{background:var(--panel3);border:1px solid var(--border);border-radius:8px;padding:12px 14px;}
+#page-stage1 .stat .num{font-size:22px;font-weight:800;color:var(--text);}
+#page-stage1 .stat .num.warn{color:var(--warn);}
+#page-stage1 .stat .num.bad{color:var(--bad);}
+#page-stage1 .stat .lab{font-size:11px;color:var(--muted);margin-top:2px;}
+#page-stage1 .item-bar-row{display:flex;align-items:center;gap:10px;font-size:12px;margin-top:8px;}
+#page-stage1 .item-bar-row .name{width:80px;color:var(--muted);flex:0 0 auto;}
+#page-stage1 .item-bar-track{flex:1;height:8px;background:#0c0e14;border-radius:4px;overflow:hidden;}
+#page-stage1 .item-bar-fill{height:100%;border-radius:4px;}
+#page-stage1 .item-bar-row .val{width:90px;text-align:right;color:var(--text);flex:0 0 auto;font-variant-numeric:tabular-nums;}
+#page-stage1 table.strip-table{width:100%;border-collapse:collapse;font-size:12.2px;}
+#page-stage1 table.strip-table th{background:#0e1018;color:var(--muted);font-weight:700;text-align:left;padding:8px 8px;position:sticky;top:56px;border-bottom:1px solid var(--border);white-space:nowrap;}
+#page-stage1 table.strip-table td{padding:7px 8px;border-bottom:1px solid #262b3a;white-space:nowrap;}
+#page-stage1 table.strip-table tr:hover td{background:rgba(70,130,210,.06);}
+#page-stage1 .yield-good{color:var(--ok);font-weight:700;}
+#page-stage1 .yield-warn{color:var(--warn);font-weight:700;}
+#page-stage1 .yield-bad{color:var(--bad);font-weight:700;}
+#page-stage1 .chip{display:inline-block;padding:1px 7px;border-radius:20px;font-size:10.5px;font-weight:700;color:#0e1018;}
+#page-stage1 .tbl-scroll{max-height:560px;overflow:auto;border:1px solid var(--border);border-radius:8px;}
+#page-stage1 select.label-select{background:var(--panel3);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:4px 6px;font-size:11.5px;}
+#page-stage1 .mini-btn{background:var(--panel3);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:4px 9px;font-size:11px;cursor:pointer;}
+#page-stage1 .mini-btn:hover{border-color:var(--accent);color:var(--accent);}
+#page-stage1 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(6,7,12,.72);z-index:1000;align-items:center;justify-content:center;padding:20px;}
+#page-stage1 .modal-overlay.open{display:flex;}
+#page-stage1 .modal-box{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:22px;max-width:900px;width:100%;max-height:90vh;overflow:auto;position:relative;}
+#page-stage1 .modal-close{position:absolute;top:14px;right:16px;background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;}
+#page-stage1 .modal-close:hover{color:var(--text);}
+#page-stage1 #s1_hmTitle{font-size:15px;font-weight:700;margin-bottom:4px;}
+#page-stage1 #s1_hmSub{font-size:12px;color:var(--muted);margin-bottom:14px;}
+#page-stage1 .hm-grid{display:inline-grid;gap:2px;background:#0c0e14;padding:8px;border-radius:8px;}
+#page-stage1 .hm-cell{width:26px;height:26px;border-radius:3px;font-size:8.5px;display:flex;align-items:center;justify-content:center;color:#0e1018;font-weight:700;position:relative;cursor:default;}
+#page-stage1 .hm-cell.nodata{background:var(--c-nodata);color:#555;}
+#page-stage1 .hm-cell .dot{position:absolute;top:1px;right:1px;width:5px;height:5px;border-radius:50%;background:#fff;box-shadow:0 0 0 1px #000;}
+#page-stage1 .legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:14px;font-size:11.5px;}
+#page-stage1 .legend .sw{display:inline-flex;align-items:center;gap:5px;}
+#page-stage1 .legend .sw i{width:12px;height:12px;border-radius:3px;display:inline-block;}
+#page-stage1 .feature-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px 16px;margin-top:16px;font-size:12px;}
+#page-stage1 .feature-list div span.k{color:var(--muted);}
+#page-stage1 .feature-list div span.v{color:var(--text);font-weight:700;float:right;}
+#page-stage2 header.top{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:12px;height:56px;padding:0 22px;background:#0e1018;border-bottom:2px solid var(--border);}
+#page-stage2 header.top .logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:15px;color:var(--accent);letter-spacing:.4px;}
+#page-stage2 header.top .logo svg{width:22px;height:22px;}
+#page-stage2 header.top .stage-tag{margin-left:auto;font-size:11.5px;font-weight:700;color:#0e1018;background:#7c5cbf;padding:4px 10px;border-radius:20px;letter-spacing:.3px;}
+#page-stage2 .wrap{max-width:1400px;margin:0 auto;padding:22px 20px;}
+#page-stage2 h2{font-size:18px;font-weight:700;margin-bottom:4px;}
+#page-stage2 .subtitle{color:var(--muted);font-size:12.5px;margin-bottom:18px;}
+#page-stage2 .card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin-bottom:18px;}
+#page-stage2 .card h3{font-size:13.5px;font-weight:700;margin-bottom:12px;color:var(--text);display:flex;align-items:center;gap:8px;}
+#page-stage2 .card h3 svg{width:16px;height:16px;color:var(--accent);}
+#page-stage2 .card .hint{font-size:12px;color:var(--muted);margin-bottom:12px;}
+#page-stage2 .drop-zone{border:2px dashed var(--border);border-radius:10px;padding:22px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s;color:var(--muted);}
+#page-stage2 .drop-zone:hover, #page-stage2 .drop-zone.drag{border-color:var(--accent);background:rgba(70,130,210,.06);}
+#page-stage2 .drop-zone svg{width:28px;height:28px;margin-bottom:6px;color:var(--accent);}
+#page-stage2 .drop-zone p{font-size:13px;}
+#page-stage2 .btn{display:inline-flex;align-items:center;gap:7px;background:var(--accent);color:#fff;border:none;border-radius:7px;padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;transition:filter .1s;}
+#page-stage2 .btn svg{width:15px;height:15px;}
+#page-stage2 .btn:hover{filter:brightness(1.1);}
+#page-stage2 .btn:disabled{opacity:.4;cursor:default;}
+#page-stage2 .btn.green{background:var(--ok);}
+#page-stage2 .btn.grey{background:#4a5268;}
+#page-stage2 .btn.purple{background:#7c5cbf;}
+#page-stage2 .btn.warnb{background:var(--warn);color:#0e1018;}
+#page-stage2 .btn.outline{background:transparent;border:1px solid var(--border);color:var(--text);}
+#page-stage2 .controls{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;}
+#page-stage2 .log-area{margin-top:14px;background:#0c0e14;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-family:Consolas,monospace;font-size:11.5px;max-height:150px;overflow-y:auto;color:#9aa4bd;}
+#page-stage2 .summary-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:6px;}
+#page-stage2 .stat{background:var(--panel3);border:1px solid var(--border);border-radius:8px;padding:12px 14px;}
+#page-stage2 .stat .num{font-size:22px;font-weight:800;color:var(--text);}
+#page-stage2 .stat .num.warn{color:var(--warn);}
+#page-stage2 .stat .num.bad{color:var(--bad);}
+#page-stage2 .stat .lab{font-size:11px;color:var(--muted);margin-top:2px;}
+#page-stage2 .bar-row{display:flex;align-items:center;gap:10px;font-size:12px;margin-top:8px;}
+#page-stage2 .bar-row .name{width:130px;color:var(--muted);flex:0 0 auto;}
+#page-stage2 .bar-track{flex:1;height:8px;background:#0c0e14;border-radius:4px;overflow:hidden;}
+#page-stage2 .bar-fill{height:100%;border-radius:4px;}
+#page-stage2 .bar-row .val{width:70px;text-align:right;color:var(--text);flex:0 0 auto;font-variant-numeric:tabular-nums;}
+#page-stage2 .import-log{margin-top:12px;font-size:11.5px;color:var(--muted);}
+#page-stage2 .import-log .row{display:flex;gap:10px;padding:5px 0;border-bottom:1px solid #262b3a;}
+#page-stage2 .import-log .row span.f{color:var(--text);flex:1;}
+#page-stage2 .tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;}
+#page-stage2 .tab-btn{background:var(--panel3);border:1px solid var(--border);color:var(--muted);border-radius:7px;padding:8px 14px;font-size:12.5px;font-weight:600;cursor:pointer;}
+#page-stage2 .tab-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+#page-stage2 .tab-panel{display:none;}
+#page-stage2 .tab-panel.active{display:block;}
+#page-stage2 .field-row{display:flex;align-items:center;gap:10px;font-size:12.5px;margin-top:8px;flex-wrap:wrap;}
+#page-stage2 .field-row label{color:var(--muted);min-width:110px;}
+#page-stage2 .field-row input[type=number]{width:80px;background:var(--panel3);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:6px 8px;}
+#page-stage2 .metric-row{display:flex;gap:22px;flex-wrap:wrap;margin-top:14px;}
+#page-stage2 .metric{background:var(--panel3);border:1px solid var(--border);border-radius:8px;padding:10px 16px;min-width:120px;}
+#page-stage2 .metric .v{font-size:20px;font-weight:800;}
+#page-stage2 .metric .k{font-size:11px;color:var(--muted);margin-top:2px;}
+#page-stage2 table.dmat{border-collapse:collapse;font-size:11px;margin-top:10px;}
+#page-stage2 table.dmat th, #page-stage2 table.dmat td{border:1px solid var(--border);padding:5px 8px;text-align:center;min-width:40px;}
+#page-stage2 table.dmat th{background:#0e1018;color:var(--muted);font-weight:700;}
+#page-stage2 table.dmat td.diag{background:rgba(60,190,130,.18);font-weight:700;}
+#page-stage2 table.dmat td.err{background:rgba(229,72,77,.10);}
+#page-stage2 .loss-chart{background:#0c0e14;border:1px solid var(--border);border-radius:8px;padding:10px;margin-top:10px;}
+#page-stage2 table.strip-table{width:100%;border-collapse:collapse;font-size:12.2px;}
+#page-stage2 table.strip-table th{background:#0e1018;color:var(--muted);font-weight:700;text-align:left;padding:8px 8px;position:sticky;top:0;border-bottom:1px solid var(--border);white-space:nowrap;}
+#page-stage2 table.strip-table td{padding:7px 8px;border-bottom:1px solid #262b3a;white-space:nowrap;}
+#page-stage2 table.strip-table tr:hover td{background:rgba(70,130,210,.06);}
+#page-stage2 .yield-good{color:var(--ok);font-weight:700;}
+#page-stage2 .yield-warn{color:var(--warn);font-weight:700;}
+#page-stage2 .yield-bad{color:var(--bad);font-weight:700;}
+#page-stage2 .chip{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:700;}
+#page-stage2 .chip.pred{background:#2a3350;color:#9db8ea;}
+#page-stage2 .chip.conf-hi{background:rgba(60,190,130,.18);color:var(--ok);}
+#page-stage2 .chip.conf-mid{background:rgba(232,160,32,.18);color:var(--warn);}
+#page-stage2 .chip.conf-lo{background:rgba(229,72,77,.15);color:var(--bad);}
+#page-stage2 .tbl-scroll{max-height:520px;overflow:auto;border:1px solid var(--border);border-radius:8px;}
+#page-stage2 select.label-select{background:var(--panel3);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:4px 6px;font-size:11.5px;}
+#page-stage2 .mini-btn{background:var(--panel3);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:4px 9px;font-size:11px;cursor:pointer;}
+#page-stage2 .mini-btn:hover{border-color:var(--accent);color:var(--accent);}
+#page-stage2 .mini-btn.accept{border-color:var(--ok);color:var(--ok);}
+#page-stage2 .filter-row{display:flex;gap:10px;align-items:center;margin-bottom:10px;font-size:12px;}
+#page-stage2 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(6,7,12,.72);z-index:1000;align-items:center;justify-content:center;padding:20px;}
+#page-stage2 .modal-overlay.open{display:flex;}
+#page-stage2 .modal-box{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:22px;max-width:900px;width:100%;max-height:90vh;overflow:auto;position:relative;}
+#page-stage2 .modal-close{position:absolute;top:14px;right:16px;background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;}
+#page-stage2 .modal-close:hover{color:var(--text);}
+#page-stage2 #s2_hmTitle{font-size:15px;font-weight:700;margin-bottom:4px;}
+#page-stage2 #s2_hmSub{font-size:12px;color:var(--muted);margin-bottom:14px;}
+#page-stage2 .hm-grid{display:inline-grid;gap:2px;background:#0c0e14;padding:8px;border-radius:8px;}
+#page-stage2 .hm-cell{width:24px;height:24px;border-radius:3px;font-size:8px;display:flex;align-items:center;justify-content:center;color:#0e1018;font-weight:700;}
+#page-stage2 .hm-cell.nodata{background:var(--c-nodata);color:#555;}
+#page-stage2 .legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:14px;font-size:11px;}
+#page-stage2 .legend .sw{display:inline-flex;align-items:center;gap:5px;}
+#page-stage2 .legend .sw i{width:12px;height:12px;border-radius:3px;display:inline-block;}
+#page-stage2 .feature-note{background:var(--panel3);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-size:11.5px;color:var(--muted);line-height:1.7;}
+#page-stage2 .feature-note b{color:var(--text);}
+#page-stage2 code.k{background:#0c0e14;border:1px solid var(--border);border-radius:4px;padding:1px 5px;color:#9db8ea;font-family:Consolas,monospace;}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="logo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
+    </svg>
+    Strip Test Fail Pattern AI
+  </div>
+  <nav>
+    <button class="nav-tab active" data-page="page-stage1">STAGE 1 · 資料蒐集</button>
+    <button class="nav-tab" data-page="page-stage2">STAGE 2 · 歸類模型</button>
+    <button class="nav-tab arch" data-page="page-architecture">Architecture</button>
+  </nav>
+  <div class="ver">Stage1 v1.2 · Stage2 v1.0</div>
+</header>
+
+<section id="page-stage1" class="page active">
+
+
+<div class="wrap">
+  <h2>Strip Test Defect Fail Pattern — Dataset 蒐集工具</h2>
+  <div class="subtitle">目標測試項：VTH／GET VTH &lt;1.5V／GET VTH &gt;6V／VFSD／BVDSS 2／BVDSS 1／Delta3／IPD-10V／IDSS1～IDSS3（v1.1：已補上先前遺漏的 BVDSS/Delta3/GET VTH 判定項，並新增 Bin 欄位資料檢核；v1.2：yield&gt;95% 的 strip 自動預標「None / No Fail」加速人工判別，仍可手動修改）。輸出 die-level 與 strip-level 資料集，供 Stage 2 fail pattern 歸類模型訓練使用。</div>
+
+  <!-- Upload -->
+  <div class="card">
+    <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 21h16"/></svg>上傳測試 Log</h3>
+    <div class="drop-zone" id="s1_dropZone">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h16v16H4z" opacity="0"/><path d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9z"/><path d="M14 3v6h6"/></svg>
+      <p>拖曳 .xls / .xlsx / .zip（內含 xls）至此，或點擊選取檔案</p>
+      <input type="file" id="s1_fileInput" multiple accept=".xls,.xlsx,.zip" style="display:none">
+    </div>
+    <div class="file-chip-row" id="fileChipRow"></div>
+  </div>
+
+  <!-- Config -->
+  <div class="card">
+    <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.6 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.6a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>判定測試項設定</h3>
+    <div class="item-grid" id="itemGrid"></div>
+    <div class="adv-toggle" id="advToggle">▸ 進階設定（Grid 尺寸 / 手動覆寫 Spec Limit）</div>
+    <div class="adv-panel" id="advPanel">
+      <div class="grid-side-row">
+        <span>Strip Grid 邊長（每 slot 顆數 = 邊長²）：</span>
+        <input type="number" id="gridSide" value="13" min="2" max="60">
+        <span style="color:var(--muted)">預設 13 → 169 顆/slot（依 UNITS_PER_SLOT 換算，可依實際產品調整）</span>
+      </div>
+      <div style="margin-top:12px;font-size:12px;color:var(--muted)">下方留空 = 使用檔案內 Min/Max Limit 列自動判讀；填入數值則覆寫全部檔案。</div>
+      <div class="adv-row" style="margin-top:10px;color:var(--text);font-weight:700;"><span>測試項</span><span></span><span>Min</span><span>Max</span></div>
+      <div id="limitRows"></div>
+    </div>
+    <div class="controls">
+      <button class="btn" id="btnProcess" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> 解析並建立 Dataset
+      </button>
+      <button class="btn outline" id="btnImportJson">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg> 匯入既有 Dataset JSON（續標記）
+      </button>
+      <input type="file" id="jsonInput" accept=".json" style="display:none">
+    </div>
+    <div class="log-area" id="s1_logArea">準備就緒...</div>
+  </div>
+
+  <!-- Summary -->
+  <div class="card" id="summaryCard" style="display:none;">
+    <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg>總覽</h3>
+    <div class="summary-cards" id="s1_summaryCards"></div>
+    <div id="itemBars" style="margin-top:14px;"></div>
+  </div>
+
+  <!-- Results -->
+  <div class="card" id="resultCard" style="display:none;">
+    <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Strip-Level 資料集（每列 = 一個 strip / slot，即一個 fail pattern 樣本）</h3>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">點擊「Heatmap」預覽該 strip 的空間分布，並可於 Pattern Label 手動標記類別，供 Stage 2 監督式訓練使用。</div>
+    <div class="tbl-scroll">
+      <table class="strip-table" id="stripTable">
+        <thead><tr id="stripTableHead"></tr></thead>
+        <tbody id="stripTableBody"></tbody>
+      </table>
+    </div>
+    <div class="controls">
+      <button class="btn green" id="btnExportStripCsv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg> 匯出 Strip-Level 特徵 CSV</button>
+      <button class="btn grey" id="btnExportDieCsv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg> 匯出 Die-Level 原始 CSV</button>
+      <button class="btn purple" id="btnExportJson"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg> 匯出完整 Dataset JSON（含 Grid + Label，供 Stage 2 訓練）</button>
+    </div>
+  </div>
+</div>
+
+<!-- Heatmap Modal -->
+<div class="modal-overlay" id="s1_hmModal">
+  <div class="modal-box">
+    <button class="modal-close" id="s1_hmClose">✕</button>
+    <div id="s1_hmTitle"></div>
+    <div id="s1_hmSub"></div>
+    <div id="s1_hmGridWrap" style="overflow:auto;"></div>
+    <div class="legend" id="s1_hmLegend"></div>
+    <div class="feature-list" id="hmFeatures"></div>
+  </div>
+</div>
+
+
+</section>
+
+<section id="page-stage2" class="page">
+
+
+<div class="wrap">
+  <h2>Strip Test Fail Pattern — 歸類模型訓練 / 累積 / 推論</h2>
+  <div class="subtitle">匯入 Stage 1 匯出的 Dataset JSON（可一次匯入多批 / 多 lot），持續累積成中央訓練集；提供 Rule-based 基準、k-NN、Softmax 迴歸三種歸類模型，並支援標記 → 訓練 → 預測 → 人工校正 → 再訓練 的循環。</div>
+
+  <!-- 1. Import / Accumulate -->
+  <div class="card">
+    <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>匯入 / 累積 Dataset</h3>
+    <div class="hint">可重複匯入多個 Stage1 匯出的 <code class="k">StripFailPattern_Dataset_*.json</code>，或先前匯出的 Stage2 <code class="k">MasterDataset</code> JSON（含已標記結果，可跨 session 續用）。同一 strip（Lot+Slot）重複匯入時，會保留既有的人工標記，只更新特徵資料。</div>
+    <div class="drop-zone" id="s2_dropZone">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h16v16H4z" opacity="0"/><path d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9z"/><path d="M14 3v6h6"/></svg>
+      <p>拖曳一個或多個 Dataset JSON 至此，或點擊選取檔案</p>
+      <input type="file" id="s2_fileInput" multiple accept=".json" style="display:none">
+    </div>
+    <div class="controls">
+      <button class="btn grey" id="btnClearAll">🗑 清空累積資料集</button>
+    </div>
+    <div class="import-log" id="importLog"></div>
+    <div class="log-area" id="s2_logArea">尚未匯入任何資料...</div>
+  </div>
+
+  <!-- 2. Overview -->
+  <div class="card" id="overviewCard" style="display:none;">
+    <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg>累積資料集總覽</h3>
+    <div class="summary-cards" id="s2_summaryCards"></div>
+    <div id="labelDist" style="margin-top:14px;"></div>
+    <div id="imbalanceWarn" style="margin-top:10px;font-size:12px;color:var(--warn);"></div>
+  </div>
+
+  <!-- 3. Feature vector note -->
+  <div class="card" id="featureCard" style="display:none;">
+    <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 3"/></svg>模型輸入特徵（每個 strip → 19 維特徵向量）</h3>
+    <div class="feature-note">
+      <b>空間分布特徵（8 維，來自 Stage1 Strip-Level 計算）：</b> 1-Yield（總 fail 率）、EdgeFailRatio、InteriorFailRatio、CenterFailRatio、MaxRowFailFrac、MaxColFailFrac、ClusterScore（8-neighbor 群聚度）、BBoxDensity（fail 外接框密度）。<br>
+      <b>測試項別 fail rate（11 維）：</b> VTH／GET_VTH_LO／GET_VTH_HI／VFSD／BVDSS2／BVDSS1／DELTA3／IPD_10V／IDSS1／IDSS2／IDSS3 各自的 fail 率（若某批資料未涵蓋該測試項，則補 0）。<br>
+      訓練 / 推論前皆會用目前累積資料集重新做 Min-Max Normalize，並把 Scaler 隨模型權重一起匯出，確保之後匯入推論時使用同一組尺度。
+    </div>
+  </div>
+
+  <!-- 4. Model training -->
+  <div class="card" id="modelCard" style="display:none;">
+    <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>歸類模型</h3>
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="rule">① Rule-based 基準</button>
+      <button class="tab-btn" data-tab="knn">② k-NN</button>
+      <button class="tab-btn" data-tab="softmax">③ Softmax 迴歸（可 Fine-tune）</button>
+      <button class="tab-btn" data-tab="compare">④ 模型比較</button>
+    </div>
+
+    <div class="tab-panel active" id="panel-rule">
+      <div class="hint">不需訓練資料，依 EdgeRatio / RowColStreak / ClusterScore / Quadrant 等特徵套用工程經驗法則，做為冷啟動基準（Stage1 剛開始累積、標記樣本還很少時可先用這個）。</div>
+      <button class="btn outline" id="btnRunRule">套用 Rule-based 分類到全部 strip</button>
+      <div class="metric-row" id="ruleMetrics"></div>
+    </div>
+
+    <div class="tab-panel" id="panel-knn">
+      <div class="hint">以「已標記」樣本為訓練集，用正規化後的特徵向量做最近鄰投票。資料持續累積時完全不用重新訓練，新標記樣本立即生效——適合標記樣本還不多、類別會持續增加的早期階段。</div>
+      <div class="field-row"><label>k（鄰居數）</label><input type="number" id="knnK" value="5" min="1" max="25"></div>
+      <button class="btn" id="btnRunKnn">執行 Leave-One-Out 驗證</button>
+      <div class="metric-row" id="knnMetrics"></div>
+      <div id="knnConfusion"></div>
+    </div>
+
+    <div class="tab-panel" id="panel-softmax">
+      <div class="hint">多類別 Softmax 迴歸（線性分類器），以梯度下降訓練。支援「Fine-tune / 增量訓練」：每次點擊會從目前記憶體中的權重繼續訓練（warm start），新出現的類別會自動加入權重矩陣，不會打掉舊類別已學到的權重。資料量成長到中大型規模、且類別已相對穩定時，這個模型通常比 k-NN 更穩定、預測更快。</div>
+      <div class="field-row">
+        <label>Epochs</label><input type="number" id="smEpochs" value="300" min="10" max="5000">
+        <label>Learning Rate</label><input type="number" id="smLr" value="0.5" min="0.001" max="5" step="0.01">
+        <label>驗證集比例</label><input type="number" id="smVal" value="0.2" min="0" max="0.5" step="0.05">
+      </div>
+      <div class="controls">
+        <button class="btn purple" id="btnTrainSoftmax">🔥 Train / Fine-tune（接續現有權重）</button>
+        <button class="btn grey" id="btnResetSoftmax">重設權重（從頭訓練）</button>
+      </div>
+      <div class="metric-row" id="smMetrics"></div>
+      <div class="loss-chart" id="lossChart" style="display:none;"></div>
+      <div id="smConfusion"></div>
+    </div>
+
+    <div class="tab-panel" id="panel-compare">
+      <div class="hint">在同一組已標記樣本上比較三種模型的準確率（Rule-based：全量比對；k-NN：LOOCV；Softmax：目前權重在 held-out 驗證集上的準確率，若尚未訓練請先到③訓練）。</div>
+      <button class="btn outline" id="btnCompare">執行比較</button>
+      <div id="compareChart" style="margin-top:14px;"></div>
+    </div>
+  </div>
+
+  <!-- 5. Predict & review -->
+  <div class="card" id="predictCard" style="display:none;">
+    <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>推論 & 人工校正（Active-Learning 循環）</h3>
+    <div class="hint">選擇上方任一已「訓練/套用」的模型作為推論來源，對每個 strip 產生建議標籤與信心值；工程師確認或修正後按「採用」即寫回 ManualLabel，成為下一輪 Fine-tune 的新訓練資料——這就是「持續累積 + fine-tune」的完整循環。</div>
+    <div class="filter-row">
+      <label>推論模型來源：</label>
+      <select class="label-select" id="predictModelSel">
+        <option value="rule">Rule-based</option>
+        <option value="knn">k-NN</option>
+        <option value="softmax">Softmax（需先訓練）</option>
+      </select>
+      <button class="btn outline" id="btnRunPredict">產生 / 更新預測</button>
+      <label style="margin-left:16px;"><input type="checkbox" id="filterUnlabeled" checked> 只顯示尚未標記的 strip</label>
+    </div>
+    <div class="tbl-scroll">
+      <table class="strip-table" id="predictTable">
+        <thead><tr><th>Lot</th><th>Slot</th><th>Dies</th><th>Fail</th><th>Yield</th><th>建議標籤</th><th>信心</th><th>目前 ManualLabel</th><th>Heatmap</th></tr></thead>
+        <tbody id="predictTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 6. Export -->
+  <div class="card" id="exportCard" style="display:none;">
+    <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>匯出</h3>
+    <div class="controls">
+      <button class="btn green" id="btnExportMaster">匯出累積 Master Dataset JSON（含標記，下次可續用）</button>
+      <button class="btn purple" id="btnExportWeights">匯出 Softmax 模型權重 JSON</button>
+      <button class="btn grey" id="btnExportPredCsv">匯出目前預測結果 CSV</button>
+      <button class="btn outline" id="btnExportModelCard">匯出 Model Card（各類別 Precision/Recall/F1）</button>
+    </div>
+  </div>
+</div>
+
+<!-- Heatmap Modal -->
+<div class="modal-overlay" id="s2_hmModal">
+  <div class="modal-box">
+    <button class="modal-close" id="s2_hmClose">✕</button>
+    <div id="s2_hmTitle"></div>
+    <div id="s2_hmSub"></div>
+    <div id="s2_hmGridWrap" style="overflow:auto;"></div>
+    <div class="legend" id="s2_hmLegend"></div>
+  </div>
+</div>
+
+
+</section>
+
+<section id="page-architecture" class="page">
+
+<div class="wrap">
+  <h2>Strip Test Fail Pattern AI — 架構總覽 & 使用說明</h2>
+  <div class="subtitle">Stage 1（資料蒐集）→ Stage 2（歸類模型 / 累積 / Fine-tune）的完整流程，以及兩者之間的資料交換格式。</div>
+
+  <!-- Pipeline diagram -->
+  <div class="card">
+    <h3>整體流程</h3>
+    <div class="flow">
+      <div class="flow-box s1">
+        <div class="flow-title">STAGE 1 · Dataset Builder</div>
+        <ul>
+          <li>上傳 Strip Test <code>.xls</code> log（可多檔 / 多 lot）</li>
+          <li>依「判定測試項設定」重算每顆 die 的 Pass/Fail</li>
+          <li>依 Remark 還原 Slot，並依 GridSide 還原 2D 座標</li>
+          <li>計算 Strip-level 空間特徵（Edge/Center/Cluster/Streak…）</li>
+          <li>Bin 欄位資料檢核，抓漏抓的測試項</li>
+          <li><b>yield&gt;95% 自動預標 "None / No Fail"</b>，其餘人工在 Heatmap 上快速標記</li>
+        </ul>
+        <div class="flow-out">輸出：<code>StripFailPattern_Dataset_*.json</code></div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box s2">
+        <div class="flow-title">STAGE 2 · 歸類模型</div>
+        <ul>
+          <li>匯入 / 累積多批 Stage1 Dataset JSON（去重、保留既有標記）</li>
+          <li>19 維特徵向量 + Min-Max Normalize</li>
+          <li>Rule-based（冷啟動）／k-NN（即時更新）／Softmax（可 Fine-tune）</li>
+          <li>LOOCV / Train-Val 準確率、Confusion Matrix</li>
+          <li>對未標記 strip 產生建議標籤 + 信心值</li>
+          <li>工程師確認/修正 → 寫回標記 → 下一輪 Fine-tune</li>
+        </ul>
+        <div class="flow-out">輸出：<code>MasterDataset.json</code> / 模型權重 / 預測 CSV / Model Card</div>
+      </div>
+    </div>
+    <div class="loop-note">⟲ Stage2 的標記校正結果可匯出、再匯入回 Stage1 的資料（或直接留在 Stage2 累積），持續擴大訓練集 → 下次 Fine-tune 準確率持續提升。</div>
+  </div>
+
+  <!-- Data schema -->
+  <div class="card">
+    <h3>資料交換格式（JSON）</h3>
+    <div class="hint">Stage1 匯出、Stage2 匯入的是同一份 schema，關鍵欄位：</div>
+    <div class="schema-grid">
+      <div class="schema-item"><code>key</code><span>= Lot__slotNN，跨批合併去重用</span></div>
+      <div class="schema-item"><code>features</code><span>strip-level 空間特徵（yield、edgeFailRatio、clusterScore…）+ 各測試項 fail rate</span></div>
+      <div class="schema-item"><code>manualLabel</code><span>人工（或自動預標）的 pattern 標籤，Stage2 訓練用的 ground truth</span></div>
+      <div class="schema-item"><code>autoLabeled</code><span>true = 由 yield&gt;95% 規則自動預標、尚未人工複核</span></div>
+      <div class="schema-item"><code>grid</code><span>已算好的 2D pass/fail/item 網格，Stage2 直接拿來畫 Heatmap，不用重算</span></div>
+      <div class="schema-item"><code>dies</code><span>die-level 明細（座標、量測值、各項目 Pass/Fail、原始 Bin）</span></div>
+    </div>
+  </div>
+
+  <!-- Model choice rationale -->
+  <div class="card">
+    <h3>Stage 2 模型選擇邏輯</h3>
+    <table class="model-table">
+      <tr><th>階段</th><th>建議模型</th><th>原因</th></tr>
+      <tr><td>標記樣本很少（&lt; 30 筆 / 類別不足）</td><td class="mrule">Rule-based</td><td>不需訓練資料，工程經驗直接編碼，先求「堪用」</td></tr>
+      <tr><td>標記樣本持續累積中（幾十～數百筆）</td><td class="mknn">k-NN</td><td>新標記立即生效、不用重訓，適合標記還在快速變動的階段</td></tr>
+      <tr><td>類別已相對穩定、樣本量變大</td><td class="msoft">Softmax 迴歸</td><td>線性分類器，訓練/推論皆快，支援 warm-start 增量 Fine-tune</td></tr>
+      <tr><td>未來：樣本量達數千筆以上</td><td class="mcnn">CNN（Stage 3 構想）</td><td>直接吃 2D fail map 影像，不需手工特徵；樣本量不足前效益有限，暫不建置</td></tr>
+    </table>
+  </div>
+
+  <!-- Usage guide -->
+  <div class="card">
+    <h3>使用步驟</h3>
+    <ol class="steps">
+      <li><b>Stage 1</b>：上傳當批 <code>.xls</code>，確認「判定測試項設定」涵蓋所有測試項，按「開始處理」。留意 Bin 欄位資料檢核是否出現 ⚠ 不一致警告。</li>
+      <li>在 Strip 列表中檢視 Heatmap，yield&gt;95% 的 strip 已預標 "None / No Fail"（灰底 <span class="chip" style="background:#3a4258">auto</span> 標籤），只需快速確認；其餘 strip 依實際圖形挑選 Pattern Label。</li>
+      <li>按「匯出 Dataset JSON」，得到本批的 Stage1 Dataset。</li>
+      <li>切到 <b>Stage 2</b>，把該 JSON（可一次丟多批）拖進「匯入 / 累積 Dataset」。</li>
+      <li>視累積量選擇模型：樣本少先用①Rule-based 或②k-NN 驗證；樣本夠了用③Softmax「Train / Fine-tune」（會自動 warm-start）。</li>
+      <li>到⑤「推論 & 人工校正」，選一個模型產生建議標籤，逐筆確認或按「採用」寫回 ManualLabel。</li>
+      <li>匯出 Master Dataset JSON 備份（含所有標記與模型權重），下次開啟 Stage 2 直接匯入即可從累積進度和權重繼續，不用從頭再標一次。</li>
+    </ol>
+  </div>
+</div>
+
+<style>
+#page-architecture .flow{display:flex;align-items:stretch;gap:16px;margin-top:6px;flex-wrap:wrap;}
+#page-architecture .flow-box{flex:1;min-width:260px;background:var(--panel3);border:1px solid var(--border);border-radius:10px;padding:16px 18px;}
+#page-architecture .flow-box.s1{border-top:3px solid var(--accent);}
+#page-architecture .flow-box.s2{border-top:3px solid #7c5cbf;}
+#page-architecture .flow-title{font-weight:800;font-size:13.5px;margin-bottom:10px;}
+#page-architecture .flow-box ul{margin:0 0 10px 18px;font-size:12px;color:var(--text);line-height:1.8;}
+#page-architecture .flow-out{font-size:11.5px;color:var(--muted);border-top:1px dashed var(--border);padding-top:8px;}
+#page-architecture .flow-arrow{display:flex;align-items:center;justify-content:center;font-size:26px;color:var(--muted);padding:0 4px;}
+#page-architecture .loop-note{margin-top:14px;font-size:12px;color:var(--warn);}
+#page-architecture .schema-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:10px;margin-top:6px;}
+#page-architecture .schema-item{background:var(--panel3);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:12px;}
+#page-architecture .schema-item code{color:#9db8ea;font-family:Consolas,monospace;margin-right:8px;}
+#page-architecture .schema-item span{color:var(--muted);}
+#page-architecture .model-table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:8px;}
+#page-architecture .model-table th,#page-architecture .model-table td{border:1px solid var(--border);padding:9px 12px;text-align:left;}
+#page-architecture .model-table th{background:#0e1018;color:var(--muted);}
+#page-architecture .model-table td.mrule{color:#8a93ab;font-weight:700;}
+#page-architecture .model-table td.mknn{color:#4682d2;font-weight:700;}
+#page-architecture .model-table td.msoft{color:#7c5cbf;font-weight:700;}
+#page-architecture .model-table td.mcnn{color:#8a93ab;font-weight:700;font-style:italic;}
+#page-architecture .steps{margin-left:20px;font-size:13px;line-height:2.1;}
+#page-architecture .steps b{color:var(--accent);}
+#page-architecture code{background:#0c0e14;border:1px solid var(--border);border-radius:4px;padding:1px 5px;color:#9db8ea;font-family:Consolas,monospace;font-size:11.5px;}
+</style>
+
+</section>
+
+<script>
+document.querySelectorAll('header.top nav button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('header.top nav button').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.page).classList.add('active');
+  });
+});
+</script>
+
+<script>
+(function(){
+const ROOT = document.getElementById('page-stage1');
+function $id(id){ return ROOT.querySelector('#'+id); }
+
+
+
+// ══════════════════════════════════════════════════════════════
+// CONSTANTS
+// ══════════════════════════════════════════════════════════════
+const TARGET_SHEET = "LoggerData";
+const ROW_MIN = 3, ROW_MAX = 4, ROW_HEADER = 9, ROW_DATA = 10;
+
+// display name -> column name used in LoggerData header row
+const ITEM_DEFS = [
+  {key:"VTH",        col:"VTH",            color:"var(--c-vth)",     defMin:1.5,  defMax:6.0,  abbr:"V"},
+  {key:"GET_VTH_LO", col:"GET VTH <1.5V",  color:"var(--c-getvthlo)",defMin:1.5,  defMax:999,   abbr:"Gl"},
+  {key:"GET_VTH_HI", col:"GET VTH >6V",    color:"var(--c-getvthhi)",defMin:1.5,  defMax:6.0,   abbr:"Gh"},
+  {key:"VFSD",       col:"VFSD",           color:"var(--c-vfsd)",    defMin:0.4,  defMax:0.9,   abbr:"F"},
+  {key:"BVDSS2",     col:"BVDSS 2",        color:"var(--c-bvdss2)",  defMin:19.65,defMax:23.0,  abbr:"B2"},
+  {key:"BVDSS1",     col:"BVDSS 1",        color:"var(--c-bvdss1)",  defMin:19.65,defMax:22.5,  abbr:"B1"},
+  {key:"DELTA3",     col:"Delta3",         color:"var(--c-delta3)",  defMin:0.02, defMax:2.0,   abbr:"D3"},
+  {key:"IPD_10V",    col:"IPD-10V",        color:"var(--c-ipd)",     defMin:20.0, defMax:40.0,  abbr:"IP"},
+  {key:"IDSS1",      col:"IDSS1",          color:"var(--c-idss1)",   defMin:0.0,  defMax:10.0,  abbr:"I1"},
+  {key:"IDSS2",      col:"IDSS2",          color:"var(--c-idss2)",   defMin:0.0,  defMax:10.0,  abbr:"I2"},
+  {key:"IDSS3",      col:"IDSS3",          color:"var(--c-idss3)",   defMin:0.0,  defMax:10.0,  abbr:"I3"},
+];
+const ITEM_KEYS = ITEM_DEFS.map(i=>i.key);
+const ITEM_COLOR = Object.fromEntries(ITEM_DEFS.map(i=>[i.key,i.color]));
+
+const LABEL_OPTIONS = ["","None / No Fail","Random / Scatter","Edge-Ring","Corner","Center",
+  "Row-Streak","Column-Streak","Cluster","Full-Fail","Other"];
+
+// ══════════════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════════════
+let pickedFiles = [];
+let strips = [];       // array of strip objects (the dataset rows)
+let activeItems = new Set(ITEM_KEYS);
+let manualLimits = {}; // key -> {min,max} override (blank = use file limits)
+let gridSideCfg = 13;
+
+// ══════════════════════════════════════════════════════════════
+// UI: item checkboxes + limit override rows
+// ══════════════════════════════════════════════════════════════
+const itemGrid = $id('itemGrid');
+ITEM_DEFS.forEach(it=>{
+  const row = document.createElement('label');
+  row.className='item-check';
+  row.innerHTML = `<input type="checkbox" data-key="${it.key}" checked>
+    <span class="swatch" style="background:${it.color}"></span> ${it.key}`;
+  itemGrid.appendChild(row);
+});
+itemGrid.addEventListener('change', e=>{
+  if(e.target.matches('input[type="checkbox"]')){
+    const k=e.target.dataset.key;
+    if(e.target.checked)activeItems.add(k);else activeItems.delete(k);
+  }
+});
+
+const limitRowsEl = $id('limitRows');
+ITEM_DEFS.forEach(it=>{
+  const row=document.createElement('div');
+  row.className='adv-row';
+  row.innerHTML=`<span class="lab">${it.key}</span><span style="color:var(--muted)">(${it.col})</span>
+    <input type="number" step="any" placeholder="min" data-key="${it.key}" data-bound="min">
+    <input type="number" step="any" placeholder="max" data-key="${it.key}" data-bound="max">`;
+  limitRowsEl.appendChild(row);
+});
+limitRowsEl.addEventListener('input', e=>{
+  const k=e.target.dataset.key, b=e.target.dataset.bound;
+  if(!k)return;
+  if(!manualLimits[k])manualLimits[k]={min:null,max:null};
+  const v=e.target.value.trim();
+  manualLimits[k][b]=v===""?null:Number(v);
+});
+
+$id('advToggle').onclick=()=>{
+  const p=$id('advPanel');
+  p.classList.toggle('open');
+  $id('advToggle').textContent=(p.classList.contains('open')?'▾':'▸')+' 進階設定（Grid 尺寸 / 手動覆寫 Spec Limit）';
+};
+$id('gridSide').addEventListener('change', e=>{
+  const v=parseInt(e.target.value,10);
+  gridSideCfg = Number.isFinite(v)&&v>1?v:13;
+});
+
+// ══════════════════════════════════════════════════════════════
+// FILE PICKING
+// ══════════════════════════════════════════════════════════════
+const s1_dropZone=$id('s1_dropZone');
+const s1_fileInput=$id('s1_fileInput');
+s1_dropZone.onclick=()=>s1_fileInput.click();
+s1_fileInput.onchange=()=>onFiles(s1_fileInput.files);
+s1_dropZone.ondragover=e=>{e.preventDefault();s1_dropZone.classList.add('drag');};
+s1_dropZone.ondragleave=()=>s1_dropZone.classList.remove('drag');
+s1_dropZone.ondrop=e=>{e.preventDefault();s1_dropZone.classList.remove('drag');onFiles(e.dataTransfer.files);};
+
+function onFiles(fileList){
+  pickedFiles=[...fileList];
+  const row=$id('fileChipRow');
+  row.innerHTML='';
+  pickedFiles.forEach(f=>{
+    const c=document.createElement('div');
+    c.className='file-chip';
+    c.textContent=`${f.name} (${(f.size/1024).toFixed(0)} KB)`;
+    row.appendChild(c);
+  });
+  $id('btnProcess').disabled = pickedFiles.length===0;
+  addLog(`已選取 ${pickedFiles.length} 個檔案`);
+}
+
+function addLog(msg,isError=false){
+  const d=document.createElement('div');
+  if(isError)d.style.color="#ff6b6b";
+  d.textContent=`[${new Date().toLocaleTimeString()}] ${msg}`;
+  const area=$id('s1_logArea');
+  area.appendChild(d);area.scrollTop=area.scrollHeight;
+}
+
+// ══════════════════════════════════════════════════════════════
+// FILE / ZIP HELPERS
+// ══════════════════════════════════════════════════════════════
+function isExcelFile(n){return/\.(xls|xlsx)$/i.test(n);}
+function isZipFile(n){return/\.zip$/i.test(n);}
+function baseName(n){return n.replace(/^.*[\\\/]/,'').replace(/\.(xls|xlsx)$/i,'');}
+function getSheetName(wb,target){return wb.SheetNames.find(s=>s.trim().toLowerCase()===target.toLowerCase())||null;}
+function parseLimit(raw){if(raw===null||raw===undefined)return null;const m=String(raw).trim().match(/[-+]?\d*\.?\d+/);return m?Number(m[0]):null;}
+function toNumber(raw){if(raw===null||raw===undefined||raw==="")return null;if(typeof raw==="number")return Number.isFinite(raw)?raw:null;const n=Number(String(raw).trim().replace(/,/g,""));return Number.isFinite(n)?n:null;}
+function extractSlot(remark){if(remark===null||remark===undefined)return null;const parts=String(remark).trim().split(/\s+/).filter(Boolean);if(parts.length<2)return null;const code=parts[parts.length-1];if(code.length<2)return null;const n=parseInt(code.slice(-2),10);return Number.isFinite(n)?n:null;}
+
+async function collectExcelEntries(inputFiles){
+  const entries=[];
+  for(const file of inputFiles){
+    if(isExcelFile(file.name)){entries.push({name:file.name,data:await file.arrayBuffer()});continue;}
+    if(isZipFile(file.name)){
+      if(typeof JSZip==="undefined")throw new Error("JSZip not loaded.");
+      const zip=await JSZip.loadAsync(await file.arrayBuffer());
+      const names=Object.keys(zip.files).filter(n=>!zip.files[n].dir&&isExcelFile(n));
+      if(!names.length)addLog(`跳過 [${file.name}]: zip 內沒有 xls/xlsx`,true);
+      for(const n of names){entries.push({name:n,data:await zip.files[n].async("arraybuffer")});}
+      continue;
+    }
+    addLog(`跳過 [${file.name}]: 不支援的檔案類型`,true);
+  }
+  return entries;
+}
+
+// ══════════════════════════════════════════════════════════════
+// CORE PARSER — LoggerData -> die records -> strips (grouped by slot)
+// ══════════════════════════════════════════════════════════════
+function resolveLimits(colIdx, minRow, maxRow){
+  const limits={};
+  ITEM_DEFS.forEach(it=>{
+    const ci=colIdx(it.col);
+    let min = ci!==undefined ? parseLimit(minRow[ci]) : null;
+    let max = ci!==undefined ? parseLimit(maxRow[ci]) : null;
+    if(min===null) min = it.defMin;
+    if(max===null) max = it.defMax;
+    const override = manualLimits[it.key];
+    if(override){
+      if(override.min!==null && override.min!==undefined) min=override.min;
+      if(override.max!==null && override.max!==undefined) max=override.max;
+    }
+    limits[it.key]={min,max};
+  });
+  return limits;
+}
+
+function parseWorkbookToStrips(entry, gridSide){
+  const wb=XLSX.read(entry.data,{type:'array',cellDates:false});
+  const sheetName=getSheetName(wb,TARGET_SHEET);
+  if(!sheetName)throw new Error(`Sheet '${TARGET_SHEET}' not found.`);
+  const rows=XLSX.utils.sheet_to_json(wb.Sheets[sheetName],{header:1,defval:""});
+  if(rows.length<=ROW_HEADER)throw new Error("Insufficient rows.");
+  const headers=rows[ROW_HEADER].map(h=>String(h).trim());
+  const col={};
+  headers.forEach((h,i)=>{if(h&&col[h.toLowerCase()]===undefined)col[h.toLowerCase()]=i;});
+  const colIdx=name=>col[name.toLowerCase()];
+
+  const xCol=colIdx("X"), remarkCol=colIdx("Remark"), serialCol=colIdx("Serial"), binCol=colIdx("Bin");
+  if(xCol===undefined || remarkCol===undefined) throw new Error("缺少 X 或 Remark 欄位，無法定位 slot / 座標。");
+
+  const itemCols={};
+  ITEM_DEFS.forEach(it=>{ const ci=colIdx(it.col); if(ci!==undefined) itemCols[it.key]=ci; });
+
+  const limits = resolveLimits(colIdx, rows[ROW_MIN]||[], rows[ROW_MAX]||[]);
+  const lot = baseName(entry.name);
+
+  const stripMap = new Map(); // slot -> strip obj
+
+  for(let r=ROW_DATA;r<rows.length;r++){
+    const row=rows[r]||[];
+    if(String(row[0]??"").trim()==="")break;
+    const remark = row[remarkCol];
+    const slot = extractSlot(remark);
+    if(slot===null) continue;
+    const xOld = toNumber(row[xCol]);
+    if(xOld===null || xOld<=0) continue;
+    const x = Math.trunc((xOld + gridSide - 1) / gridSide);
+    const y = gridSide - ((xOld - 1) % gridSide);
+
+    const values={}, fails={};
+    let anyFail=false, failCount=0;
+    ITEM_DEFS.forEach(it=>{
+      if(!activeItems.has(it.key)) return;
+      const ci=itemCols[it.key];
+      const val = ci!==undefined ? toNumber(row[ci]) : null;
+      values[it.key]=val;
+      const lim=limits[it.key];
+      const failed = val===null || (lim.min!==null && val<lim.min) || (lim.max!==null && val>lim.max);
+      fails[it.key]=failed;
+      if(failed){anyFail=true;failCount++;}
+    });
+
+    const die={
+      serial: serialCol!==undefined ? row[serialCol] : (r-ROW_DATA+1),
+      x, y, xOld,
+      values, fails, anyFail, failCount,
+      binOriginal: binCol!==undefined ? row[binCol] : null
+    };
+
+    if(!stripMap.has(slot)){
+      stripMap.set(slot, {
+        lot, slot, fileName: entry.name.replace(/^.*[\\\/]/,''),
+        limits, gridSide, dies: []
+      });
+    }
+    stripMap.get(slot).dies.push(die);
+  }
+
+  return [...stripMap.values()];
+}
+
+// ══════════════════════════════════════════════════════════════
+// FEATURE ENGINEERING (per strip)
+// ══════════════════════════════════════════════════════════════
+function computeStripFeatures(strip){
+  const G = strip.gridSide;
+  const dieMap = new Map();
+  strip.dies.forEach(d=>dieMap.set(`${d.x},${d.y}`, d));
+
+  const totalDies = strip.dies.length;
+  const failDies = strip.dies.filter(d=>d.anyFail);
+  const failCount = failDies.length;
+
+  const itemFailCount={}, itemFailRate={};
+  ITEM_DEFS.forEach(it=>{
+    if(!activeItems.has(it.key)){itemFailCount[it.key]=0;itemFailRate[it.key]=0;return;}
+    const c = strip.dies.filter(d=>d.fails[it.key]).length;
+    itemFailCount[it.key]=c;
+    itemFailRate[it.key]= totalDies>0 ? c/totalDies : 0;
+  });
+  let dominantItem="None", dominantMax=0;
+  ITEM_DEFS.forEach(it=>{ if(activeItems.has(it.key) && itemFailCount[it.key]>dominantMax){dominantMax=itemFailCount[it.key];dominantItem=it.key;} });
+  if(dominantMax===0) dominantItem="None";
+
+  // border / interior
+  let borderTotal=0, borderFail=0, interiorTotal=0, interiorFail=0;
+  strip.dies.forEach(d=>{
+    const isBorder = d.x===1||d.x===G||d.y===1||d.y===G;
+    if(isBorder){borderTotal++; if(d.anyFail)borderFail++;}
+    else{interiorTotal++; if(d.anyFail)interiorFail++;}
+  });
+  const edgeFailRatio = borderTotal>0? borderFail/borderTotal : 0;
+  const interiorFailRatio = interiorTotal>0? interiorFail/interiorTotal : 0;
+
+  // center region (inner third)
+  const margin = Math.max(1, Math.floor(G/3));
+  const lo = margin+1, hi = G-margin;
+  let centerTotal=0, centerFail=0;
+  strip.dies.forEach(d=>{
+    if(d.x>=lo && d.x<=hi && d.y>=lo && d.y<=hi){ centerTotal++; if(d.anyFail)centerFail++; }
+  });
+  const centerFailRatio = centerTotal>0? centerFail/centerTotal : 0;
+
+  // row / column streak detection
+  const rowTotal={}, rowFail={}, colTotal={}, colFail={};
+  strip.dies.forEach(d=>{
+    rowTotal[d.y]=(rowTotal[d.y]||0)+1; if(d.anyFail)rowFail[d.y]=(rowFail[d.y]||0)+1;
+    colTotal[d.x]=(colTotal[d.x]||0)+1; if(d.anyFail)colFail[d.x]=(colFail[d.x]||0)+1;
+  });
+  let maxRowFailFrac=0, maxColFailFrac=0;
+  Object.keys(rowTotal).forEach(y=>{ const f=(rowFail[y]||0)/rowTotal[y]; if(f>maxRowFailFrac)maxRowFailFrac=f; });
+  Object.keys(colTotal).forEach(x=>{ const f=(colFail[x]||0)/colTotal[x]; if(f>maxColFailFrac)maxColFailFrac=f; });
+
+  // 8-neighbor clustering score
+  const NB=[-1,0,1];
+  let clustered=0;
+  failDies.forEach(d=>{
+    let hasFailNeighbor=false;
+    for(const dx of NB)for(const dy of NB){
+      if(dx===0&&dy===0)continue;
+      const n=dieMap.get(`${d.x+dx},${d.y+dy}`);
+      if(n && n.anyFail){hasFailNeighbor=true;break;}
+    }
+    if(hasFailNeighbor)clustered++;
+  });
+  const clusterScore = failCount>0 ? clustered/failCount : 0;
+
+  // bounding box density of fails
+  let bboxDensity=0, bboxW=0, bboxH=0;
+  if(failCount>0){
+    const xs=failDies.map(d=>d.x), ys=failDies.map(d=>d.y);
+    const minX=Math.min(...xs), maxX=Math.max(...xs), minY=Math.min(...ys), maxY=Math.max(...ys);
+    bboxW=maxX-minX+1; bboxH=maxY-minY+1;
+    const area=bboxW*bboxH;
+    bboxDensity = area>0 ? failCount/area : 0;
+  }
+
+  // quadrant distribution
+  const cx=(1+G)/2, cy=(1+G)/2;
+  const quad={TL:0,TR:0,BL:0,BR:0};
+  failDies.forEach(d=>{
+    const key=(d.x<cx?"L":"R")+(d.y<cy?"B":"T");
+    if(key==="LT")quad.TL++; else if(key==="RT")quad.TR++; else if(key==="LB")quad.BL++; else quad.BR++;
+  });
+  let dominantQuadrant="None", qMax=0;
+  Object.entries(quad).forEach(([k,v])=>{if(v>qMax){qMax=v;dominantQuadrant=k;}});
+  if(failCount===0)dominantQuadrant="None";
+
+  // ── Data-quality cross-check: compare our item-based fail count against
+  // the file's own Bin column. We assume the two most frequent Bin values
+  // in this strip are the "pass" bins (matches Poworld convention of a main
+  // pass bin + a secondary pass/regrade bin). Any other Bin = reference fail.
+  // A large mismatch vs our computed failDies usually means ITEM_DEFS is
+  // missing a test item that this bin category depends on (see console/log).
+  const binCounts={};
+  strip.dies.forEach(d=>{
+    const b=toNumber(d.binOriginal);
+    if(b===null)return;
+    binCounts[b]=(binCounts[b]||0)+1;
+  });
+  const sortedBins=Object.entries(binCounts).sort((a,b)=>b[1]-a[1]);
+  const passBins=new Set(sortedBins.slice(0,2).map(([b])=>b));
+  const binRefFail = strip.dies.filter(d=>{
+    const b=toNumber(d.binOriginal);
+    return b!==null && !passBins.has(String(b));
+  }).length;
+
+  return{
+    totalDies, failDies:failCount, yield: totalDies>0?(totalDies-failCount)/totalDies:0,
+    itemFailCount, itemFailRate, dominantItem,
+    edgeFailRatio, interiorFailRatio, centerFailRatio,
+    maxRowFailFrac, maxColFailFrac, clusterScore,
+    bboxDensity, bboxW, bboxH,
+    quadrant: quad, dominantQuadrant,
+    binRefFail
+  };
+}
+
+// priority order for single-code grid rendering when a die fails multiple items
+function pickPrimaryFailItem(die){
+  for(const it of ITEM_DEFS){ if(activeItems.has(it.key) && die.fails[it.key]) return it.key; }
+  return null;
+}
+
+// ══════════════════════════════════════════════════════════════
+// PROCESS BUTTON
+// ══════════════════════════════════════════════════════════════
+$id('btnProcess').onclick=async()=>{
+  strips=[];
+  $id('summaryCard').style.display='none';
+  $id('resultCard').style.display='none';
+  let entries=[];
+  try{ entries=await collectExcelEntries(pickedFiles); }
+  catch(err){ addLog(`讀取失敗: ${err.message}`,true); return; }
+
+  const gridSide = gridSideCfg;
+  for(const entry of entries){
+    try{
+      const stripList = parseWorkbookToStrips(entry, gridSide);
+      stripList.forEach(s=>{
+        s.features = computeStripFeatures(s);
+        // Speed up manual review: strips with yield > 95% are overwhelmingly "no real pattern"
+        // (isolated random single-die fails). Pre-fill them as "None / No Fail" so the engineer
+        // only needs to eyeball/confirm these, and can focus attention on the lower-yield strips.
+        // Still fully editable via the dropdown afterwards.
+        s.manualLabel = s.features.yield > 0.95 ? "None / No Fail" : "";
+        s.autoLabeled = s.manualLabel !== "";
+        s.key = `${s.lot}__slot${String(s.slot).padStart(2,'0')}`;
+      });
+      strips.push(...stripList);
+      addLog(`成功: ${entry.name} → ${stripList.length} strips, ${stripList.reduce((a,s)=>a+s.dies.length,0)} dies`);
+    }catch(err){
+      addLog(`錯誤 [${entry.name}]: ${err.message}`,true);
+    }
+  }
+  strips.sort((a,b)=> a.lot.localeCompare(b.lot,undefined,{sensitivity:'base'}) || a.slot-b.slot);
+  if(strips.length===0){ addLog('沒有成功解析任何 strip。',true); return; }
+
+  // Data-quality check: item-based fail count vs Bin-column reference fail count
+  const totFail = strips.reduce((a,s)=>a+s.features.failDies,0);
+  const totRef  = strips.reduce((a,s)=>a+s.features.binRefFail,0);
+  if(totFail!==totRef){
+    addLog(`⚠ 資料檢核: 依判定測試項算出的 Fail 顆數 (${totFail}) 與檔案 Bin 欄位推算的參考 Fail 顆數 (${totRef}) 不一致，可能有未勾選/未定義的測試項漏抓 fail bin，請檢查「判定測試項設定」是否涵蓋所有會造成 fail 的項目。`, true);
+  }else{
+    addLog(`✓ 資料檢核通過: 判定測試項 Fail 顆數與 Bin 欄位參考值一致 (${totFail} 顆)。`);
+  }
+
+  renderSummary();
+  renderStripTable();
+};
+
+// ══════════════════════════════════════════════════════════════
+// RENDER: SUMMARY
+// ══════════════════════════════════════════════════════════════
+function renderSummary(){
+  const card=$id('summaryCard');
+  card.style.display='block';
+  const lots=new Set(strips.map(s=>s.lot));
+  const totalDies=strips.reduce((a,s)=>a+s.features.totalDies,0);
+  const totalFail=strips.reduce((a,s)=>a+s.features.failDies,0);
+  const totalBinRef=strips.reduce((a,s)=>a+s.features.binRefFail,0);
+  const autoLabeledCount=strips.filter(s=>s.autoLabeled).length;
+  const yieldPct= totalDies>0 ? (1-totalFail/totalDies)*100 : 0;
+
+  const cards=$id('s1_summaryCards');
+  cards.innerHTML=`
+    <div class="stat"><div class="num">${lots.size}</div><div class="lab">Lot 檔案數</div></div>
+    <div class="stat"><div class="num">${strips.length}</div><div class="lab">Strip / Slot 樣本數</div></div>
+    <div class="stat"><div class="num">${totalDies.toLocaleString()}</div><div class="lab">Die 總數</div></div>
+    <div class="stat"><div class="num ${yieldPct<90?'bad':yieldPct<98?'warn':''}">${yieldPct.toFixed(2)}%</div><div class="lab">整體良率</div></div>
+    <div class="stat"><div class="num bad">${totalFail.toLocaleString()}</div><div class="lab">Fail Die 總數</div></div>
+    <div class="stat"><div class="num ${totalBinRef!==totalFail?'warn':''}">${totalBinRef.toLocaleString()}</div><div class="lab">Bin 欄位參考 Fail 數${totalBinRef!==totalFail?' ⚠不一致':''}</div></div>
+    <div class="stat"><div class="num" style="color:var(--ok)">${autoLabeledCount} / ${strips.length}</div><div class="lab">已自動標註 None（yield&gt;95%，仍可人工修改）</div></div>
+  `;
+
+  const maxRate = Math.max(0.0001, ...ITEM_DEFS.map(it=> totalDies>0 ? strips.reduce((a,s)=>a+s.features.itemFailCount[it.key],0)/totalDies : 0));
+  const bars=$id('itemBars');
+  bars.innerHTML='';
+  ITEM_DEFS.forEach(it=>{
+    if(!activeItems.has(it.key))return;
+    const cnt = strips.reduce((a,s)=>a+s.features.itemFailCount[it.key],0);
+    const rate = totalDies>0? cnt/totalDies : 0;
+    const row=document.createElement('div');
+    row.className='item-bar-row';
+    row.innerHTML=`<div class="name">${it.key}</div>
+      <div class="item-bar-track"><div class="item-bar-fill" style="width:${(rate/maxRate*100).toFixed(1)}%;background:${it.color}"></div></div>
+      <div class="val">${cnt.toLocaleString()} (${(rate*100).toFixed(3)}%)</div>`;
+    bars.appendChild(row);
+  });
+}
+
+// ══════════════════════════════════════════════════════════════
+// RENDER: STRIP TABLE
+// ══════════════════════════════════════════════════════════════
+function yieldClass(y){ if(y<0.90)return'yield-bad'; if(y<0.98)return'yield-warn'; return'yield-good'; }
+
+function renderStripTable(){
+  const card=$id('resultCard');
+  card.style.display='block';
+
+  const head=$id('stripTableHead');
+  const activeList = ITEM_DEFS.filter(it=>activeItems.has(it.key));
+  head.innerHTML = `<th>Lot</th><th>Slot</th><th>Dies</th><th>Fail</th><th>Yield</th>` +
+    activeList.map(it=>`<th>${it.key} Fail</th>`).join('') +
+    `<th>Dominant</th><th>Edge Fail%</th><th>Cluster</th><th>Row/Col Streak</th><th>Pattern Label</th><th>Heatmap</th>`;
+
+  const body=$id('stripTableBody');
+  body.innerHTML='';
+  strips.forEach((s,idx)=>{
+    const f=s.features;
+    const tr=document.createElement('tr');
+    tr.innerHTML = `<td>${s.lot}</td><td>${String(s.slot).padStart(2,'0')}</td>
+      <td>${f.totalDies}</td><td>${f.failDies}</td>
+      <td class="${yieldClass(f.yield)}">${(f.yield*100).toFixed(2)}%</td>` +
+      activeList.map(it=>`<td>${f.itemFailCount[it.key]}</td>`).join('') +
+      `<td><span class="chip" style="background:${f.dominantItem==='None'?'#3a4258':ITEM_COLOR[f.dominantItem]}">${f.dominantItem}</span></td>
+      <td>${(f.edgeFailRatio*100).toFixed(1)}%</td>
+      <td>${(f.clusterScore*100).toFixed(0)}%</td>
+      <td>${(Math.max(f.maxRowFailFrac,f.maxColFailFrac)*100).toFixed(0)}%</td>
+      <td></td>
+      <td><button class="mini-btn" data-idx="${idx}">🔥 View</button></td>`;
+    // label select
+    const labelTd = tr.children[tr.children.length-2];
+    const sel=document.createElement('select');
+    sel.className='label-select';
+    LABEL_OPTIONS.forEach(opt=>{
+      const o=document.createElement('option'); o.value=opt; o.textContent=opt||'(未標記)';
+      if(opt===s.manualLabel)o.selected=true;
+      sel.appendChild(o);
+    });
+    labelTd.appendChild(sel);
+    const autoBadge=document.createElement('span');
+    autoBadge.className='chip'; autoBadge.style.background='#3a4258'; autoBadge.style.marginLeft='6px';
+    autoBadge.style.display = s.autoLabeled ? 'inline-block':'none';
+    autoBadge.textContent='auto (yield>95%)';
+    labelTd.appendChild(autoBadge);
+    sel.onchange=()=>{ s.manualLabel=sel.value; s.autoLabeled=false; autoBadge.style.display='none'; };
+    body.appendChild(tr);
+  });
+  body.querySelectorAll('button[data-idx]').forEach(btn=>{
+    btn.onclick=()=>openHeatmap(parseInt(btn.dataset.idx,10));
+  });
+}
+
+// ══════════════════════════════════════════════════════════════
+// HEATMAP MODAL
+// ══════════════════════════════════════════════════════════════
+function openHeatmap(idx){
+  const s=strips[idx];
+  const f=s.features;
+  const G=s.gridSide;
+  $id('s1_hmTitle').textContent = `${s.lot} — Slot ${String(s.slot).padStart(2,'0')}`;
+  $id('s1_hmSub').textContent = `${f.totalDies} dies, ${f.failDies} fail (${(f.yield*100).toFixed(2)}% yield) · Dominant: ${f.dominantItem}`;
+
+  const dieMap=new Map();
+  s.dies.forEach(d=>dieMap.set(`${d.x},${d.y}`, d));
+
+  const wrap=$id('s1_hmGridWrap');
+  wrap.innerHTML='';
+  const grid=document.createElement('div');
+  grid.className='hm-grid';
+  grid.style.gridTemplateColumns=`repeat(${G}, 26px)`;
+  for(let y=G; y>=1; y--){
+    for(let x=1; x<=G; x++){
+      const d=dieMap.get(`${x},${y}`);
+      const cell=document.createElement('div');
+      if(!d){
+        cell.className='hm-cell nodata';
+        cell.textContent='';
+        cell.title=`(${x},${y}) 無資料`;
+      }else{
+        cell.className='hm-cell';
+        const primary = d.anyFail ? pickPrimaryFailItem(d) : null;
+        cell.style.background = d.anyFail ? (ITEM_COLOR[primary]||'#888') : 'var(--c-pass)';
+        cell.textContent = d.anyFail ? (ITEM_DEFS.find(it=>it.key===primary)?.abbr || primary.slice(0,2)) : '';
+        const valLines = ITEM_DEFS.filter(it=>activeItems.has(it.key)).map(it=>{
+          const v=d.values[it.key];
+          const bad=d.fails[it.key];
+          return `${it.key}=${v===null?'—':v}${bad?' ✗':''}`;
+        }).join('\n');
+        cell.title = `(${x},${y}) Serial:${d.serial}\n${valLines}`;
+        if(d.failCount>1){
+          const dot=document.createElement('span'); dot.className='dot'; cell.appendChild(dot);
+        }
+      }
+      grid.appendChild(cell);
+    }
+  }
+  wrap.appendChild(grid);
+
+  const legend=$id('s1_hmLegend');
+  legend.innerHTML = `<span class="sw"><i style="background:var(--c-pass)"></i>Pass</span>` +
+    ITEM_DEFS.filter(it=>activeItems.has(it.key)).map(it=>`<span class="sw"><i style="background:${it.color}"></i>${it.key} Fail</span>`).join('') +
+    `<span class="sw"><i style="background:var(--c-nodata)"></i>No Data</span>` +
+    `<span class="sw">● = 多測試項同時 Fail</span>`;
+
+  const feat=$id('hmFeatures');
+  feat.innerHTML = `
+    <div><span class="k">Edge Fail Ratio</span><span class="v">${(f.edgeFailRatio*100).toFixed(1)}%</span></div>
+    <div><span class="k">Interior Fail Ratio</span><span class="v">${(f.interiorFailRatio*100).toFixed(1)}%</span></div>
+    <div><span class="k">Center Fail Ratio</span><span class="v">${(f.centerFailRatio*100).toFixed(1)}%</span></div>
+    <div><span class="k">Max Row Streak</span><span class="v">${(f.maxRowFailFrac*100).toFixed(0)}%</span></div>
+    <div><span class="k">Max Col Streak</span><span class="v">${(f.maxColFailFrac*100).toFixed(0)}%</span></div>
+    <div><span class="k">Cluster Score</span><span class="v">${(f.clusterScore*100).toFixed(0)}%</span></div>
+    <div><span class="k">BBox Density</span><span class="v">${(f.bboxDensity*100).toFixed(0)}%</span></div>
+    <div><span class="k">BBox Size</span><span class="v">${f.bboxW}×${f.bboxH}</span></div>
+    <div><span class="k">Dominant Quadrant</span><span class="v">${f.dominantQuadrant}</span></div>
+  `;
+
+  $id('s1_hmModal').classList.add('open');
+}
+$id('s1_hmClose').onclick=()=>$id('s1_hmModal').classList.remove('open');
+$id('s1_hmModal').onclick=function(e){if(e.target===this)this.classList.remove('open');};
+
+// ══════════════════════════════════════════════════════════════
+// EXPORTS
+// ══════════════════════════════════════════════════════════════
+function csvEscape(v){
+  if(v===null||v===undefined)return"";
+  const s=String(v);
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s;
+}
+function downloadText(name,text,type){
+  const blob=new Blob([text],{type});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download=name; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1500);
+}
+function todayStr(){const d=new Date();const pad=n=>String(n).padStart(2,"0");return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}`;}
+
+$id('btnExportStripCsv').onclick=()=>{
+  const activeList=ITEM_DEFS.filter(it=>activeItems.has(it.key));
+  const headers=["Lot","Slot","TotalDies","FailDies","Yield",
+    ...activeList.flatMap(it=>[`${it.key}_FailCount`,`${it.key}_FailRate`]),
+    "DominantFailItem","EdgeFailRatio","InteriorFailRatio","CenterFailRatio",
+    "MaxRowFailFrac","MaxColFailFrac","ClusterScore","BBoxDensity","BBoxW","BBoxH",
+    "Quad_TL","Quad_TR","Quad_BL","Quad_BR","DominantQuadrant","BinRefFail","ManualLabel"];
+  const lines=[headers.join(',')];
+  strips.forEach(s=>{
+    const f=s.features;
+    const row=[s.lot, s.slot, f.totalDies, f.failDies, f.yield.toFixed(4),
+      ...activeList.flatMap(it=>[f.itemFailCount[it.key], f.itemFailRate[it.key].toFixed(4)]),
+      f.dominantItem, f.edgeFailRatio.toFixed(4), f.interiorFailRatio.toFixed(4), f.centerFailRatio.toFixed(4),
+      f.maxRowFailFrac.toFixed(4), f.maxColFailFrac.toFixed(4), f.clusterScore.toFixed(4),
+      f.bboxDensity.toFixed(4), f.bboxW, f.bboxH,
+      f.quadrant.TL, f.quadrant.TR, f.quadrant.BL, f.quadrant.BR, f.dominantQuadrant, f.binRefFail,
+      s.manualLabel];
+    lines.push(row.map(csvEscape).join(','));
+  });
+  downloadText(`StripFailPattern_StripLevel_${todayStr()}.csv`, lines.join('\r\n'), 'text/csv');
+};
+
+$id('btnExportDieCsv').onclick=()=>{
+  const activeList=ITEM_DEFS.filter(it=>activeItems.has(it.key));
+  const headers=["Lot","Slot","Serial","X","Y",
+    ...activeList.map(it=>it.key),
+    ...activeList.map(it=>`${it.key}_Fail`),
+    "AnyFail","FailCount","BinOriginal","ManualLabel"];
+  const lines=[headers.join(',')];
+  strips.forEach(s=>{
+    s.dies.forEach(d=>{
+      const row=[s.lot, s.slot, d.serial, d.x, d.y,
+        ...activeList.map(it=>d.values[it.key]),
+        ...activeList.map(it=>d.fails[it.key]?1:0),
+        d.anyFail?1:0, d.failCount, d.binOriginal, s.manualLabel];
+      lines.push(row.map(csvEscape).join(','));
+    });
+  });
+  downloadText(`StripFailPattern_DieLevel_${todayStr()}.csv`, lines.join('\r\n'), 'text/csv');
+};
+
+$id('btnExportJson').onclick=()=>{
+  const activeList=ITEM_DEFS.filter(it=>activeItems.has(it.key)).map(it=>it.key);
+  const dataset = {
+    generatedAt: new Date().toISOString(),
+    stage: 1,
+    targetItems: activeList,
+    strips: strips.map(s=>{
+      const G=s.gridSide;
+      const dieMap=new Map(s.dies.map(d=>[`${d.x},${d.y}`, d]));
+      const grid=[]; // grid[row][col], row0 = y=G (top) down to y=1
+      for(let y=G;y>=1;y--){
+        const rowArr=[];
+        for(let x=1;x<=G;x++){
+          const d=dieMap.get(`${x},${y}`);
+          if(!d){ rowArr.push({s:"nodata"}); continue; }
+          if(!d.anyFail){ rowArr.push({s:"pass"}); continue; }
+          const primary=pickPrimaryFailItem(d);
+          rowArr.push({s:"fail", item:primary, multi: d.failCount>1, failItems: activeList.filter(k=>d.fails[k])});
+        }
+        grid.push(rowArr);
+      }
+      return {
+        lot: s.lot, slot: s.slot, key: s.key, gridSide: G,
+        limits: s.limits,
+        features: s.features,
+        manualLabel: s.manualLabel,
+        autoLabeled: !!s.autoLabeled,
+        grid,
+        dies: s.dies.map(d=>({serial:d.serial,x:d.x,y:d.y,values:d.values,fails:d.fails,anyFail:d.anyFail,binOriginal:d.binOriginal}))
+      };
+    })
+  };
+  downloadText(`StripFailPattern_Dataset_${todayStr()}.json`, JSON.stringify(dataset), 'application/json');
+};
+
+// ── Import previously exported dataset JSON to resume labeling ──
+$id('btnImportJson').onclick=()=>$id('jsonInput').click();
+$id('jsonInput').onchange=async(e)=>{
+  const file=e.target.files[0];
+  if(!file)return;
+  try{
+    const text=await file.text();
+    const data=JSON.parse(text);
+    if(!data.strips)throw new Error("JSON 格式不正確，找不到 strips 陣列。");
+    strips = data.strips.map(s=>{
+      const G=s.gridSide;
+      const dies = s.dies.map(d=>({...d, failCount: Object.values(d.fails||{}).filter(Boolean).length}));
+      return { lot:s.lot, slot:s.slot, key:s.key, gridSide:G, limits:s.limits, dies,
+        features: s.features, manualLabel: s.manualLabel||"", autoLabeled: !!s.autoLabeled };
+    });
+    // recompute active items from imported targetItems if present
+    if(Array.isArray(data.targetItems)){
+      activeItems = new Set(data.targetItems);
+      itemGrid.querySelectorAll('input[type="checkbox"]').forEach(cb=>{
+        cb.checked = activeItems.has(cb.dataset.key);
+      });
+    }
+    addLog(`已匯入 Dataset JSON：${strips.length} strips`);
+    renderSummary();
+    renderStripTable();
+  }catch(err){
+    addLog(`匯入失敗: ${err.message}`,true);
+  }
+};
+
+})();
+</script>
+
+<script>
+(function(){
+const ROOT = document.getElementById('page-stage2');
+function $id(id){ return ROOT.querySelector('#'+id); }
+
+
+
+// ══════════════════════════════════════════════════════════════
+// CONSTANTS
+// ══════════════════════════════════════════════════════════════
+const ITEM_KEYS_CANON = ["VTH","GET_VTH_LO","GET_VTH_HI","VFSD","BVDSS2","BVDSS1","DELTA3","IPD_10V","IDSS1","IDSS2","IDSS3"];
+const ITEM_COLOR = {
+  VTH:"var(--c-vth)", GET_VTH_LO:"var(--c-getvthlo)", GET_VTH_HI:"var(--c-getvthhi)", VFSD:"var(--c-vfsd)",
+  BVDSS2:"var(--c-bvdss2)", BVDSS1:"var(--c-bvdss1)", DELTA3:"var(--c-delta3)", IPD_10V:"var(--c-ipd)",
+  IDSS1:"var(--c-idss1)", IDSS2:"var(--c-idss2)", IDSS3:"var(--c-idss3)"
+};
+const LABEL_OPTIONS = ["","None / No Fail","Random / Scatter","Edge-Ring","Corner","Center",
+  "Row-Streak","Column-Streak","Cluster","Full-Fail","Other"];
+const LABEL_COLORS = {
+  "None / No Fail":"#3a4258","Random / Scatter":"#4682d2","Edge-Ring":"#e5484d","Corner":"#f2994a",
+  "Center":"#bb6bd9","Row-Streak":"#2ec4c4","Column-Streak":"#e0559e","Cluster":"#c9b458",
+  "Full-Fail":"#e8a020","Other":"#8a93ab"
+};
+
+// ══════════════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════════════
+let masterStrips = [];     // accumulated strip records, keyed by s.key
+let importLog = [];
+let predictions = {};      // key -> {label, confidence, source}
+let smModel = null;        // {W,b,classes,scaler,lossHistory}
+let knnModel = null;        // {scaler}
+
+function addLog(msg,isError=false){
+  const d=document.createElement('div');
+  if(isError)d.style.color="#ff6b6b";
+  d.textContent=`[${new Date().toLocaleTimeString()}] ${msg}`;
+  const area=$id('s2_logArea');
+  area.appendChild(d);area.scrollTop=area.scrollHeight;
+}
+
+// ══════════════════════════════════════════════════════════════
+// IMPORT / MERGE
+// ══════════════════════════════════════════════════════════════
+const s2_dropZone=$id('s2_dropZone');
+const s2_fileInput=$id('s2_fileInput');
+s2_dropZone.onclick=()=>s2_fileInput.click();
+s2_fileInput.onchange=()=>handleFiles(s2_fileInput.files);
+s2_dropZone.ondragover=e=>{e.preventDefault();s2_dropZone.classList.add('drag');};
+s2_dropZone.ondragleave=()=>s2_dropZone.classList.remove('drag');
+s2_dropZone.ondrop=e=>{e.preventDefault();s2_dropZone.classList.remove('drag');handleFiles(e.dataTransfer.files);};
+
+async function handleFiles(fileList){
+  for(const file of [...fileList]){
+    try{
+      const text = await file.text();
+      const data = JSON.parse(text);
+      if(!Array.isArray(data.strips)) throw new Error("找不到 strips 陣列，不是有效的 Stage1/Stage2 Dataset JSON。");
+      mergeDataset(data, file.name);
+    }catch(err){
+      addLog(`匯入失敗 [${file.name}]: ${err.message}`, true);
+    }
+  }
+  renderAll();
+}
+
+function mergeDataset(data, fileName){
+  let added=0, updated=0, labelKept=0;
+  data.strips.forEach(s=>{
+    const key = s.key || `${s.lot}__slot${String(s.slot).padStart(2,'0')}`;
+    const incomingLabel = s.manualLabel || "";
+    const existing = masterStrips.find(m=>m.key===key);
+    if(!existing){
+      masterStrips.push({...s, key, manualLabel: incomingLabel});
+      added++;
+    }else{
+      const keepLabel = existing.manualLabel && !incomingLabel ? existing.manualLabel : (incomingLabel || existing.manualLabel);
+      if(existing.manualLabel && keepLabel===existing.manualLabel && incomingLabel && incomingLabel!==existing.manualLabel){
+        // incoming has a different non-blank label than existing non-blank label -> incoming wins (assume newer export)
+      }
+      Object.assign(existing, s, {key, manualLabel: incomingLabel || existing.manualLabel});
+      if(existing.manualLabel) labelKept++;
+      updated++;
+    }
+  });
+  // restore any model weights bundled in a previously-exported Stage2 master file
+  if(data.softmaxModel){
+    smModel = data.softmaxModel;
+    addLog(`已還原先前匯出的 Softmax 模型權重（類別: ${(smModel.classes||[]).join(', ')}）`);
+  }
+  if(Array.isArray(data.importLog)) importLog.push(...data.importLog);
+  importLog.push({time:new Date().toISOString(), file:fileName, added, updated, labelKept});
+  addLog(`匯入 [${fileName}]: 新增 ${added} strips，更新 ${updated} strips（其中 ${labelKept} 個保留人工標記）。累積總數: ${masterStrips.length}`);
+}
+
+$id('btnClearAll').onclick=()=>{
+  if(!confirm('確定要清空整個累積資料集嗎？此動作無法復原（可先匯出 Master Dataset 備份）。'))return;
+  masterStrips=[]; importLog=[]; predictions={}; smModel=null; knnModel=null;
+  renderAll();
+  addLog('已清空累積資料集。');
+};
+
+// ══════════════════════════════════════════════════════════════
+// FEATURE VECTOR
+// ══════════════════════════════════════════════════════════════
+function featureVector(f){
+  const v=[1-(f.yield??1), f.edgeFailRatio||0, f.interiorFailRatio||0, f.centerFailRatio||0,
+    f.maxRowFailFrac||0, f.maxColFailFrac||0, f.clusterScore||0, f.bboxDensity||0];
+  ITEM_KEYS_CANON.forEach(k=> v.push((f.itemFailRate && f.itemFailRate[k]) || 0));
+  return v;
+}
+function fitScaler(vectors){
+  const n=vectors[0].length;
+  const min=new Array(n).fill(Infinity), max=new Array(n).fill(-Infinity);
+  vectors.forEach(v=>v.forEach((x,i)=>{if(x<min[i])min[i]=x; if(x>max[i])max[i]=x;}));
+  return {min,max};
+}
+function normalize(v,scaler){
+  return v.map((x,i)=>{const r=scaler.max[i]-scaler.min[i]; return r>1e-9 ? (x-scaler.min[i])/r : 0;});
+}
+function labeledStrips(){ return masterStrips.filter(s=>s.manualLabel && s.manualLabel!==""); }
+
+// ══════════════════════════════════════════════════════════════
+// MODEL 1: RULE-BASED
+// ══════════════════════════════════════════════════════════════
+function ruleClassify(f){
+  if((f.failDies||0)===0) return "None / No Fail";
+  const failRate = 1-(f.yield??1);
+  if(failRate > 0.5) return "Full-Fail";
+  if(f.maxRowFailFrac>=0.5 && f.maxRowFailFrac>=f.maxColFailFrac) return "Row-Streak";
+  if(f.maxColFailFrac>=0.5) return "Column-Streak";
+  if(f.edgeFailRatio>0 && f.centerFailRatio===0 && f.edgeFailRatio>=3*Math.max(f.interiorFailRatio,0.0001)) return "Edge-Ring";
+  if(f.centerFailRatio>0 && f.centerFailRatio>=3*Math.max(f.edgeFailRatio,0.0001)) return "Center";
+  const bboxArea=(f.bboxW||0)*(f.bboxH||0);
+  const smallBbox = bboxArea>0 && bboxArea <= Math.max(9, f.totalDies*0.06);
+  if(f.clusterScore>=0.5 && smallBbox) return "Cluster";
+  if(f.dominantQuadrant && f.dominantQuadrant!=="None"){
+     const domCount = f.quadrant[f.dominantQuadrant];
+     if(f.failDies>0 && domCount/f.failDies>=0.75 && f.failDies<=6) return "Corner";
+  }
+  return "Random / Scatter";
+}
+
+$id('btnRunRule').onclick=()=>{
+  const labeled = labeledStrips();
+  let correct=0;
+  labeled.forEach(s=>{ if(ruleClassify(s.features)===s.manualLabel) correct++; });
+  const acc = labeled.length>0 ? correct/labeled.length*100 : 0;
+  $id('ruleMetrics').innerHTML = `
+    <div class="metric"><div class="v">${masterStrips.length}</div><div class="k">已套用 strip 數</div></div>
+    <div class="metric"><div class="v">${labeled.length>0? acc.toFixed(1)+'%':'—'}</div><div class="k">與現有人工標記一致率</div></div>
+  `;
+  addLog(`Rule-based 分類已套用到全部 ${masterStrips.length} strips${labeled.length>0? `，與人工標記一致率 ${acc.toFixed(1)}%`:''}。`);
+};
+
+// ══════════════════════════════════════════════════════════════
+// MODEL 2: k-NN
+// ══════════════════════════════════════════════════════════════
+function dist(a,b){let s=0; for(let i=0;i<a.length;i++){const d=a[i]-b[i]; s+=d*d;} return Math.sqrt(s);}
+
+function knnPredictFromSet(queryVec, trainVecs, trainLabels, k, excludeIdx=-1){
+  const d = trainVecs.map((v,i)=> i===excludeIdx? Infinity : dist(v, queryVec));
+  const idxs = d.map((v,i)=>[v,i]).sort((a,b)=>a[0]-b[0]).slice(0,k).map(p=>p[1]);
+  const votes={};
+  idxs.forEach(i=>{votes[trainLabels[i]]=(votes[trainLabels[i]]||0)+1;});
+  let best=null,bestV=-1;
+  Object.entries(votes).forEach(([l,v])=>{if(v>bestV){bestV=v;best=l;}});
+  return {label:best, confidence: bestV/idxs.length};
+}
+
+$id('btnRunKnn').onclick=()=>{
+  const k = Math.max(1, parseInt($id('knnK').value,10)||5);
+  const labeled = labeledStrips();
+  if(labeled.length < k+1){
+    $id('knnMetrics').innerHTML = `<div class="metric"><div class="v bad">—</div><div class="k">已標記樣本不足 (${labeled.length})，至少需要 k+1 = ${k+1} 筆</div></div>`;
+    return;
+  }
+  const vectors = labeled.map(s=>featureVector(s.features));
+  const scaler = fitScaler(vectors);
+  const normVecs = vectors.map(v=>normalize(v,scaler));
+  const labels = labeled.map(s=>s.manualLabel);
+  knnModel = {scaler, k};
+
+  const classes=[...new Set(labels)];
+  const conf = {}; classes.forEach(c=>{conf[c]={}; classes.forEach(c2=>conf[c][c2]=0);});
+  let correct=0;
+  for(let i=0;i<normVecs.length;i++){
+    const {label} = knnPredictFromSet(normVecs[i], normVecs, labels, k, i);
+    if(label===labels[i]) correct++;
+    if(label) conf[labels[i]][label]++;
+  }
+  const acc = correct/normVecs.length*100;
+  $id('knnMetrics').innerHTML = `
+    <div class="metric"><div class="v">${labeled.length}</div><div class="k">訓練樣本數（已標記）</div></div>
+    <div class="metric"><div class="v">${classes.length}</div><div class="k">類別數</div></div>
+    <div class="metric"><div class="v ${acc<70?'bad':acc<90?'warn':''}" style="color:inherit">${acc.toFixed(1)}%</div><div class="k">Leave-One-Out 準確率</div></div>
+  `;
+  $id('knnConfusion').innerHTML = renderConfusionMatrix(classes, conf, 'LOOCV Confusion Matrix（列=真實，欄=預測）');
+  addLog(`k-NN (k=${k}) LOOCV 完成：${labeled.length} 筆樣本、${classes.length} 類別，準確率 ${acc.toFixed(1)}%。`);
+};
+
+function renderConfusionMatrix(classes, conf, title){
+  let html = `<div style="font-size:12px;color:var(--muted);margin-top:10px;">${title}</div>`;
+  html += `<table class="dmat"><tr><th></th>${classes.map(c=>`<th>${c}</th>`).join('')}</tr>`;
+  classes.forEach(r=>{
+    html += `<tr><th>${r}</th>${classes.map(c=>{
+      const v=conf[r][c]||0;
+      const cls = r===c ? 'diag' : (v>0?'err':'');
+      return `<td class="${cls}">${v}</td>`;
+    }).join('')}</tr>`;
+  });
+  html += `</table>`;
+  return html;
+}
+
+// ══════════════════════════════════════════════════════════════
+// MODEL 3: SOFTMAX REGRESSION (multinomial logistic regression, warm-start fine-tune)
+// ══════════════════════════════════════════════════════════════
+function softmaxForward(x, W, b){
+  const logits = W.map((w,c)=> w.reduce((s,wi,i)=>s+wi*x[i],0) + b[c]);
+  const m = Math.max(...logits);
+  const exps = logits.map(l=>Math.exp(l-m));
+  const sum = exps.reduce((a,v)=>a+v,0);
+  return exps.map(e=>e/sum);
+}
+
+function trainSoftmax(){
+  const labeled = labeledStrips();
+  const epochs = Math.max(1, parseInt($id('smEpochs').value,10)||300);
+  const lr = Math.max(0.001, parseFloat($id('smLr').value)||0.5);
+  const valFrac = Math.min(0.5, Math.max(0, parseFloat($id('smVal').value)||0.2));
+
+  const classesNow = [...new Set(labeled.map(s=>s.manualLabel))];
+  if(classesNow.length < 2){
+    $id('smMetrics').innerHTML = `<div class="metric"><div class="v bad">—</div><div class="k">至少需要 2 個不同類別的已標記樣本才能訓練</div></div>`;
+    return;
+  }
+
+  const vectors = labeled.map(s=>featureVector(s.features));
+  const scaler = fitScaler(vectors);
+  const D = vectors[0].length;
+
+  // warm start: reuse existing weights if present, expand for new classes
+  let classes, W, b, lossHistory;
+  if(smModel && smModel.W){
+    classes = [...smModel.classes];
+    W = smModel.W.map(row=>[...row]);
+    b = [...smModel.b];
+    classesNow.forEach(c=>{
+      if(!classes.includes(c)){ classes.push(c); W.push(new Array(D).fill(0)); b.push(0); }
+    });
+    lossHistory = [...(smModel.lossHistory||[])];
+  }else{
+    classes = classesNow;
+    W = Array.from({length:classes.length},()=>new Array(D).fill(0));
+    b = new Array(classes.length).fill(0);
+    lossHistory = [];
+  }
+
+  // shuffle + split
+  const idxAll = labeled.map((_,i)=>i);
+  for(let i=idxAll.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [idxAll[i],idxAll[j]]=[idxAll[j],idxAll[i]];}
+  const nVal = Math.floor(idxAll.length*valFrac);
+  const valIdx = idxAll.slice(0,nVal), trainIdx = idxAll.slice(nVal);
+  const useIdx = trainIdx.length>0 ? trainIdx : idxAll;
+
+  const normVecs = vectors.map(v=>normalize(v,scaler));
+  const yIdx = labeled.map(s=>classes.indexOf(s.manualLabel));
+  const C = classes.length;
+
+  for(let e=0;e<epochs;e++){
+    const gradW = Array.from({length:C},()=>new Array(D).fill(0));
+    const gradB = new Array(C).fill(0);
+    let epochLoss=0;
+    useIdx.forEach(i=>{
+      const p = softmaxForward(normVecs[i], W, b);
+      epochLoss += -Math.log(Math.max(p[yIdx[i]], 1e-9));
+      for(let c=0;c<C;c++){
+        const err = p[c] - (yIdx[i]===c?1:0);
+        for(let j=0;j<D;j++) gradW[c][j]+=err*normVecs[i][j];
+        gradB[c]+=err;
+      }
+    });
+    const n=useIdx.length;
+    for(let c=0;c<C;c++){ for(let j=0;j<D;j++) W[c][j]-= lr*gradW[c][j]/n; b[c]-=lr*gradB[c]/n; }
+    if(e%Math.max(1,Math.floor(epochs/60))===0 || e===epochs-1) lossHistory.push(epochLoss/n);
+  }
+
+  function accOn(idxs){
+    if(idxs.length===0)return null;
+    let c=0; idxs.forEach(i=>{ const p=softmaxForward(normVecs[i],W,b); const pred=p.indexOf(Math.max(...p)); if(pred===yIdx[i])c++; });
+    return c/idxs.length;
+  }
+  const trainAcc = accOn(useIdx);
+  const valAcc = accOn(valIdx);
+
+  // confusion matrix on all labeled data
+  const conf={}; classes.forEach(c=>{conf[c]={}; classes.forEach(c2=>conf[c][c2]=0);});
+  labeled.forEach((s,i)=>{
+    const p=softmaxForward(normVecs[i],W,b); const pred=classes[p.indexOf(Math.max(...p))];
+    conf[s.manualLabel][pred]=(conf[s.manualLabel][pred]||0)+1;
+  });
+
+  smModel = {W, b, classes, scaler, lossHistory};
+
+  $id('smMetrics').innerHTML = `
+    <div class="metric"><div class="v">${labeled.length}</div><div class="k">已標記樣本（Train ${useIdx.length} / Val ${valIdx.length}）</div></div>
+    <div class="metric"><div class="v">${classes.length}</div><div class="k">類別數（累積至今）</div></div>
+    <div class="metric"><div class="v" style="color:${trainAcc<0.7?'var(--bad)':trainAcc<0.9?'var(--warn)':'var(--ok)'}">${(trainAcc*100).toFixed(1)}%</div><div class="k">Train 準確率</div></div>
+    <div class="metric"><div class="v" style="color:${valAcc===null?'inherit':valAcc<0.7?'var(--bad)':valAcc<0.9?'var(--warn)':'var(--ok)'}">${valAcc===null?'（無驗證集）':(valAcc*100).toFixed(1)+'%'}</div><div class="k">Val 準確率</div></div>
+  `;
+  renderLossChart(lossHistory);
+  $id('smConfusion').innerHTML = renderConfusionMatrix(classes, conf, '全量 Confusion Matrix（列=真實，欄=預測）');
+  addLog(`Softmax 訓練完成（warm-start=${smModel?'是':'否'}）：${epochs} epochs，train acc ${(trainAcc*100).toFixed(1)}%${valAcc!==null?`, val acc ${(valAcc*100).toFixed(1)}%`:''}，累積類別: ${classes.join(', ')}`);
+};
+$id('btnTrainSoftmax').onclick=trainSoftmax;
+$id('btnResetSoftmax').onclick=()=>{
+  smModel=null;
+  $id('lossChart').style.display='none';
+  $id('smMetrics').innerHTML='';
+  $id('smConfusion').innerHTML='';
+  addLog('已重設 Softmax 權重，下次訓練將從頭開始。');
+};
+
+function renderLossChart(history){
+  const el = $id('lossChart');
+  if(!history || history.length<2){ el.style.display='none'; return; }
+  el.style.display='block';
+  const W=560,H=120,pad=20;
+  const maxL=Math.max(...history), minL=Math.min(...history);
+  const range = Math.max(1e-6, maxL-minL);
+  const pts = history.map((v,i)=>{
+    const x = pad + (i/(history.length-1))*(W-2*pad);
+    const y = H-pad - ((v-minL)/range)*(H-2*pad);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}">
+    <polyline points="${pts}" fill="none" stroke="var(--m-softmax)" stroke-width="2"/>
+    <text x="${pad}" y="14" fill="#8a93ab" font-size="10">Loss: ${maxL.toFixed(3)} → ${history[history.length-1].toFixed(3)}</text>
+  </svg>`;
+}
+
+// ══════════════════════════════════════════════════════════════
+// COMPARE
+// ══════════════════════════════════════════════════════════════
+$id('btnCompare').onclick=()=>{
+  const labeled = labeledStrips();
+  const results=[];
+  // rule
+  let rCorrect=0; labeled.forEach(s=>{if(ruleClassify(s.features)===s.manualLabel)rCorrect++;});
+  results.push({name:'Rule-based', acc: labeled.length? rCorrect/labeled.length:0, color:'var(--m-rule)'});
+  // knn (LOOCV, k from input)
+  const k = Math.max(1, parseInt($id('knnK').value,10)||5);
+  if(labeled.length>k){
+    const vectors=labeled.map(s=>featureVector(s.features));
+    const scaler=fitScaler(vectors); const normVecs=vectors.map(v=>normalize(v,scaler));
+    const labels=labeled.map(s=>s.manualLabel);
+    let kc=0;
+    for(let i=0;i<normVecs.length;i++){ const {label}=knnPredictFromSet(normVecs[i],normVecs,labels,k,i); if(label===labels[i])kc++; }
+    results.push({name:'k-NN (LOOCV)', acc: kc/normVecs.length, color:'var(--m-knn)'});
+  }else{
+    results.push({name:'k-NN (LOOCV)', acc: null, color:'var(--m-knn)'});
+  }
+  // softmax (train acc if trained)
+  if(smModel && smModel.W){
+    const vectors=labeled.map(s=>featureVector(s.features));
+    const normVecs=vectors.map(v=>normalize(v,smModel.scaler));
+    let sc=0;
+    labeled.forEach((s,i)=>{
+      const p=softmaxForward(normVecs[i],smModel.W,smModel.b);
+      const pred=smModel.classes[p.indexOf(Math.max(...p))];
+      if(pred===s.manualLabel)sc++;
+    });
+    results.push({name:'Softmax（目前權重）', acc: sc/labeled.length, color:'var(--m-softmax)'});
+  }else{
+    results.push({name:'Softmax（尚未訓練）', acc:null, color:'var(--m-softmax)'});
+  }
+
+  const el = $id('compareChart');
+  el.innerHTML = results.map(r=>`
+    <div class="bar-row">
+      <div class="name">${r.name}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${r.acc===null?0:(r.acc*100).toFixed(1)}%;background:${r.color}"></div></div>
+      <div class="val">${r.acc===null?'—':(r.acc*100).toFixed(1)+'%'}</div>
+    </div>`).join('');
+  addLog('已執行模型比較。');
+};
+
+// ══════════════════════════════════════════════════════════════
+// TABS
+// ══════════════════════════════════════════════════════════════
+ROOT.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.onclick=()=>{
+    ROOT.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    ROOT.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    $id('panel-'+btn.dataset.tab).classList.add('active');
+  };
+});
+
+// ══════════════════════════════════════════════════════════════
+// PREDICT & REVIEW
+// ══════════════════════════════════════════════════════════════
+$id('btnRunPredict').onclick=()=>{
+  const src = $id('predictModelSel').value;
+  predictions = {};
+  if(src==='rule'){
+    masterStrips.forEach(s=>{ predictions[s.key]={label:ruleClassify(s.features), confidence:null, source:'rule'}; });
+  }else if(src==='knn'){
+    const labeled = labeledStrips();
+    const k = Math.max(1, parseInt($id('knnK').value,10)||5);
+    if(labeled.length<k+1){ addLog('已標記樣本不足，無法用 k-NN 推論，請先到②執行驗證累積更多標記。', true); return; }
+    const trainVectors = labeled.map(s=>featureVector(s.features));
+    const scaler = fitScaler(trainVectors);
+    const trainNorm = trainVectors.map(v=>normalize(v,scaler));
+    const trainLabels = labeled.map(s=>s.manualLabel);
+    masterStrips.forEach(s=>{
+      const qv = normalize(featureVector(s.features), scaler);
+      const {label,confidence} = knnPredictFromSet(qv, trainNorm, trainLabels, k);
+      predictions[s.key]={label, confidence, source:'knn'};
+    });
+  }else if(src==='softmax'){
+    if(!smModel || !smModel.W){ addLog('尚未訓練 Softmax 模型，請先到③訓練。', true); return; }
+    masterStrips.forEach(s=>{
+      const qv = normalize(featureVector(s.features), smModel.scaler);
+      const p = softmaxForward(qv, smModel.W, smModel.b);
+      const idx = p.indexOf(Math.max(...p));
+      predictions[s.key]={label: smModel.classes[idx], confidence: p[idx], source:'softmax'};
+    });
+  }
+  renderPredictTable();
+  addLog(`已用「${src}」模型產生 ${Object.keys(predictions).length} 筆預測。`);
+};
+$id('filterUnlabeled').onchange=renderPredictTable;
+
+function yieldClass(y){ if(y<0.90)return'yield-bad'; if(y<0.98)return'yield-warn'; return'yield-good'; }
+function confClass(c){ if(c===null||c===undefined)return''; if(c>=0.8)return'conf-hi'; if(c>=0.5)return'conf-mid'; return'conf-lo'; }
+
+function renderPredictTable(){
+  const onlyUnlabeled = $id('filterUnlabeled').checked;
+  const body = $id('predictTableBody');
+  body.innerHTML='';
+  const rows = masterStrips.filter(s=> !onlyUnlabeled || !s.manualLabel);
+  rows.forEach(s=>{
+    const f=s.features; const pred = predictions[s.key];
+    const tr=document.createElement('tr');
+    tr.innerHTML = `<td>${s.lot}</td><td>${String(s.slot).padStart(2,'0')}</td>
+      <td>${f.totalDies}</td><td>${f.failDies}</td>
+      <td class="${yieldClass(f.yield)}">${(f.yield*100).toFixed(2)}%</td>
+      <td>${pred? `<span class="chip pred">${pred.label}</span>` : '—'}</td>
+      <td>${pred && pred.confidence!==null ? `<span class="chip ${confClass(pred.confidence)}">${(pred.confidence*100).toFixed(0)}%</span>` : (pred?'—':'')}</td>
+      <td></td>
+      <td><button class="mini-btn" data-key="${s.key}">🔥 View</button></td>`;
+    const labelTd = tr.children[7];
+    const sel=document.createElement('select'); sel.className='label-select';
+    LABEL_OPTIONS.forEach(opt=>{ const o=document.createElement('option'); o.value=opt; o.textContent=opt||'(未標記)'; if(opt===s.manualLabel)o.selected=true; sel.appendChild(o); });
+    sel.onchange=()=>{ s.manualLabel=sel.value; renderAll(); };
+    labelTd.appendChild(sel);
+    if(pred){
+      const acceptBtn=document.createElement('button');
+      acceptBtn.className='mini-btn accept'; acceptBtn.textContent='採用';
+      acceptBtn.style.marginLeft='6px';
+      acceptBtn.onclick=()=>{ s.manualLabel = pred.label; sel.value = pred.label; renderAll(); };
+      labelTd.appendChild(acceptBtn);
+    }
+    body.appendChild(tr);
+  });
+  body.querySelectorAll('button[data-key]').forEach(btn=>{
+    btn.onclick=()=>openHeatmap(btn.dataset.key);
+  });
+}
+
+// ══════════════════════════════════════════════════════════════
+// HEATMAP (reuses grid[] already computed by Stage1 export)
+// ══════════════════════════════════════════════════════════════
+function openHeatmap(key){
+  const s = masterStrips.find(m=>m.key===key);
+  if(!s || !s.grid){ addLog('此筆資料沒有 grid 資訊（可能是舊版匯出），無法顯示 Heatmap。', true); return; }
+  const f = s.features;
+  $id('s2_hmTitle').textContent = `${s.lot} — Slot ${String(s.slot).padStart(2,'0')}`;
+  $id('s2_hmSub').textContent = `${f.totalDies} dies, ${f.failDies} fail (${(f.yield*100).toFixed(2)}% yield) · ManualLabel: ${s.manualLabel||'(未標記)'}${predictions[key]?` · 預測: ${predictions[key].label}`:''}`;
+  const wrap=$id('s2_hmGridWrap');
+  wrap.innerHTML='';
+  const G=s.gridSide;
+  const grid=document.createElement('div');
+  grid.className='hm-grid';
+  grid.style.gridTemplateColumns=`repeat(${G}, 24px)`;
+  s.grid.forEach(rowArr=>{
+    rowArr.forEach(cell=>{
+      const div=document.createElement('div');
+      if(cell.s==='nodata'){ div.className='hm-cell nodata'; }
+      else if(cell.s==='pass'){ div.className='hm-cell'; div.style.background='var(--c-pass)'; }
+      else{
+        div.className='hm-cell';
+        div.style.background = ITEM_COLOR[cell.item] || '#888';
+        div.textContent = (cell.item||'').slice(0,2);
+      }
+      grid.appendChild(div);
+    });
+  });
+  wrap.appendChild(grid);
+  const legend=$id('s2_hmLegend');
+  legend.innerHTML = `<span class="sw"><i style="background:var(--c-pass)"></i>Pass</span>` +
+    Object.entries(ITEM_COLOR).map(([k,c])=>`<span class="sw"><i style="background:${c}"></i>${k}</span>`).join('') +
+    `<span class="sw"><i style="background:var(--c-nodata)"></i>No Data</span>`;
+  $id('s2_hmModal').classList.add('open');
+}
+$id('s2_hmClose').onclick=()=>$id('s2_hmModal').classList.remove('open');
+$id('s2_hmModal').onclick=function(e){if(e.target===this)this.classList.remove('open');};
+
+// ══════════════════════════════════════════════════════════════
+// RENDER: OVERVIEW
+// ══════════════════════════════════════════════════════════════
+function renderAll(){
+  const hasData = masterStrips.length>0;
+  ['overviewCard','featureCard','modelCard','predictCard','exportCard'].forEach(id=>{
+    $id(id).style.display = hasData?'block':'none';
+  });
+  if(!hasData) return;
+
+  const lots = new Set(masterStrips.map(s=>s.lot));
+  const totalDies = masterStrips.reduce((a,s)=>a+s.features.totalDies,0);
+  const labeled = labeledStrips();
+  $id('s2_summaryCards').innerHTML = `
+    <div class="stat"><div class="num">${lots.size}</div><div class="lab">Lot 數</div></div>
+    <div class="stat"><div class="num">${masterStrips.length}</div><div class="lab">累積 Strip 樣本數</div></div>
+    <div class="stat"><div class="num">${totalDies.toLocaleString()}</div><div class="lab">Die 總數</div></div>
+    <div class="stat"><div class="num ${labeled.length===0?'warn':''}">${labeled.length}</div><div class="lab">已人工標記 Strip 數</div></div>
+    <div class="stat"><div class="num warn">${masterStrips.length-labeled.length}</div><div class="lab">尚未標記 Strip 數</div></div>
+  `;
+
+  const dist = {};
+  labeled.forEach(s=>{ dist[s.manualLabel]=(dist[s.manualLabel]||0)+1; });
+  const maxCount = Math.max(1, ...Object.values(dist));
+  const distEl = $id('labelDist');
+  if(Object.keys(dist).length===0){
+    distEl.innerHTML = `<div style="font-size:12px;color:var(--muted);">尚無人工標記樣本。請到下方⑤匯出/回填標記，或直接在 Stage1 表格中手動標記後重新匯出 JSON 匯入。</div>`;
+  }else{
+    distEl.innerHTML = Object.entries(dist).sort((a,b)=>b[1]-a[1]).map(([label,count])=>`
+      <div class="bar-row">
+        <div class="name">${label}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${(count/maxCount*100).toFixed(1)}%;background:${LABEL_COLORS[label]||'#888'}"></div></div>
+        <div class="val">${count}</div>
+      </div>`).join('');
+  }
+  const minClassCount = Object.keys(dist).length ? Math.min(...Object.values(dist)) : 0;
+  const warnEl = $id('imbalanceWarn');
+  if(Object.keys(dist).length>=2 && minClassCount<5){
+    warnEl.textContent = `⚠ 部分類別標記樣本數過少（最少的類別僅 ${minClassCount} 筆），k-NN / Softmax 對該類別的判斷可能不穩定，建議優先累積該類別的標記樣本。`;
+  }else{
+    warnEl.textContent = '';
+  }
+
+  const logEl = $id('importLog');
+  logEl.innerHTML = importLog.slice().reverse().map(l=>`
+    <div class="row"><span class="f">${l.file}</span><span>+${l.added} new</span><span>${l.updated} updated</span><span>${new Date(l.time).toLocaleString()}</span></div>
+  `).join('');
+}
+
+// ══════════════════════════════════════════════════════════════
+// EXPORT
+// ══════════════════════════════════════════════════════════════
+function downloadText(name,text,type){
+  const blob=new Blob([text],{type});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download=name; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1500);
+}
+function todayStr(){const d=new Date();const pad=n=>String(n).padStart(2,"0");return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}`;}
+function csvEscape(v){ if(v===null||v===undefined)return""; const s=String(v); return /[",\n]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s; }
+
+$id('btnExportMaster').onclick=()=>{
+  const dataset={
+    generatedAt:new Date().toISOString(), stage:2,
+    strips: masterStrips,
+    importLog,
+    softmaxModel: smModel
+  };
+  downloadText(`StripFailPattern_Stage2_MasterDataset_${todayStr()}.json`, JSON.stringify(dataset), 'application/json');
+};
+
+$id('btnExportWeights').onclick=()=>{
+  if(!smModel){ addLog('尚未訓練 Softmax 模型，無法匯出權重。', true); return; }
+  downloadText(`StripFailPattern_SoftmaxWeights_${todayStr()}.json`, JSON.stringify(smModel), 'application/json');
+};
+
+$id('btnExportPredCsv').onclick=()=>{
+  const headers=["Lot","Slot","TotalDies","FailDies","Yield","PredictedLabel","Confidence","ManualLabel"];
+  const lines=[headers.join(',')];
+  masterStrips.forEach(s=>{
+    const pred=predictions[s.key];
+    lines.push([s.lot, s.slot, s.features.totalDies, s.features.failDies, s.features.yield.toFixed(4),
+      pred?pred.label:'', pred&&pred.confidence!==null?pred.confidence.toFixed(4):'', s.manualLabel].map(csvEscape).join(','));
+  });
+  downloadText(`StripFailPattern_Predictions_${todayStr()}.csv`, lines.join('\r\n'), 'text/csv');
+};
+
+$id('btnExportModelCard').onclick=()=>{
+  const labeled = labeledStrips();
+  if(labeled.length===0){ addLog('沒有已標記樣本，無法產生 Model Card。', true); return; }
+  const classes=[...new Set(labeled.map(s=>s.manualLabel))];
+  // use current predictions if available, otherwise rule-based as fallback reference
+  const getPred = (s)=> predictions[s.key]?.label ?? ruleClassify(s.features);
+  const stats={};
+  classes.forEach(c=>stats[c]={tp:0,fp:0,fn:0});
+  labeled.forEach(s=>{
+    const pred=getPred(s), truth=s.manualLabel;
+    if(pred===truth){ stats[truth].tp++; }
+    else{ if(stats[truth])stats[truth].fn++; if(stats[pred])stats[pred].fp++; }
+  });
+  const lines=["Class,Precision,Recall,F1,SupportCount"];
+  classes.forEach(c=>{
+    const {tp,fp,fn}=stats[c];
+    const precision = tp+fp>0? tp/(tp+fp):0;
+    const recall = tp+fn>0? tp/(tp+fn):0;
+    const f1 = precision+recall>0? 2*precision*recall/(precision+recall):0;
+    const support = labeled.filter(s=>s.manualLabel===c).length;
+    lines.push([c, precision.toFixed(3), recall.toFixed(3), f1.toFixed(3), support].join(','));
+  });
+  downloadText(`StripFailPattern_ModelCard_${todayStr()}.csv`, lines.join('\r\n'), 'text/csv');
+  addLog('已匯出 Model Card（依目前預測結果與人工標記比對計算）。');
+};
+
+renderAll();
+
+})();
+</script>
+
+</body>
+</html>
