@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Strip Fail Pattern AI — 操作手冊</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{background:#0e1018;}
+body{
+  font-family:"Segoe UI","Microsoft JhengHei",sans-serif;color:#d7dceb;
+  line-height:1.7;padding-bottom:60px;
+}
+.wrap{max-width:820px;margin:0 auto;padding:0 20px;}
+
+header{
+  padding:44px 0 30px;border-bottom:2px solid #37415a;margin-bottom:32px;
+}
+header .eyebrow{
+  font-family:monospace;font-size:12px;color:#4682d2;letter-spacing:.08em;
+  text-transform:uppercase;margin-bottom:10px;
+}
+header h1{font-size:26px;color:#fff;margin-bottom:10px;}
+header p{color:#8a93ab;font-size:13.5px;max-width:560px;}
+
+.links{
+  display:grid;gap:10px;margin-top:22px;
+}
+.link-card{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  background:#151824;border:1px solid #2a3040;border-radius:10px;
+  padding:14px 16px;text-decoration:none;
+}
+.link-card .l-name{font-size:13px;font-weight:700;color:#fff;}
+.link-card .l-url{font-family:monospace;font-size:11px;color:#6b7488;word-break:break-all;}
+.link-card .l-go{font-size:11.5px;color:#4682d2;font-weight:700;white-space:nowrap;}
+.link-card.model .l-go{color:#e0a25a;}
+
+section{margin-bottom:36px;}
+.sec-tag{
+  display:inline-block;font-family:monospace;font-size:11px;font-weight:700;
+  padding:3px 10px;border-radius:999px;margin-bottom:12px;
+}
+.sec-tag.usage{background:#123625;color:#5bc98f;}
+.sec-tag.update{background:#1a2540;color:#7ea6e0;}
+.sec-tag.fix{background:#3a2a1a;color:#e0a25a;}
+section h2{font-size:18px;color:#fff;margin-bottom:16px;}
+
+.steps{counter-reset:step;}
+.step{
+  position:relative;padding-left:40px;padding-bottom:20px;
+  border-left:1px solid #2a3040;margin-left:14px;
+}
+.step:last-child{border-left:1px solid transparent;padding-bottom:0;}
+.step::before{
+  counter-increment:step;content:counter(step);
+  position:absolute;left:-14px;top:0;width:28px;height:28px;
+  background:#151824;border:1px solid #37415a;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-family:monospace;font-size:12px;font-weight:700;color:#8a93ab;
+}
+.step-title{font-size:14px;font-weight:700;color:#fff;margin-bottom:4px;}
+.step-body{font-size:13px;color:#a8b0c2;}
+.step-body code{
+  background:#0e1018;border:1px solid #2a3040;border-radius:5px;
+  padding:1px 6px;font-family:monospace;font-size:12px;color:#7ea6e0;
+}
+
+.subcard{
+  background:#151824;border:1px solid #2a3040;border-radius:10px;
+  padding:18px 18px 6px;margin-bottom:16px;
+}
+.subcard h3{font-size:13.5px;color:#fff;margin-bottom:14px;}
+
+table{width:100%;border-collapse:collapse;font-size:12.5px;margin:14px 0;}
+th,td{padding:8px 10px;border-bottom:1px solid #2a3040;text-align:left;}
+th{color:#8a93ab;background:#0e1018;font-weight:600;}
+td{color:#d7dceb;}
+td code{font-family:monospace;color:#7ea6e0;font-size:11.5px;}
+
+.callout{
+  border-left:3px solid #4682d2;background:#12182a;padding:12px 16px;
+  border-radius:0 8px 8px 0;font-size:12.5px;color:#a8b0c2;margin-top:14px;
+}
+.callout.warn{border-left-color:#e0725a;background:#241715;color:#e0a99a;}
+
+footer{
+  text-align:center;font-family:monospace;font-size:11px;color:#4a5268;
+  margin-top:40px;
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <p class="eyebrow">Strip Fail Pattern AI</p>
+    <h1>操作手冊 — 不用背，照這張表做就好</h1>
+    <p>三個雲端服務怎麼互相接、平常怎麼用、要改程式碼時怎麼推上去。全部都存在這一頁。</p>
+
+    <div class="links">
+      <a class="link-card" href="https://huggingface.co/spaces/add2609/strip_classifier_static" target="_blank">
+        <div>
+          <div class="l-name">① 分類網站（Stage 1 / Stage 2）</div>
+          <div class="l-url">huggingface.co/spaces/add2609/strip_classifier_static</div>
+        </div>
+        <div class="l-go">開啟 →</div>
+      </a>
+      <a class="link-card" href="https://huggingface.co/spaces/add2609/strip_train_predict" target="_blank">
+        <div>
+          <div class="l-name">② 訓練 / 推論主控台</div>
+          <div class="l-url">huggingface.co/spaces/add2609/strip_train_predict</div>
+        </div>
+        <div class="l-go">開啟 →</div>
+      </a>
+      <a class="link-card model" href="https://huggingface.co/add2609/strip-fail-pattern-model/tree/main" target="_blank">
+        <div>
+          <div class="l-name">③ 模型倉庫（永久保存訓練結果）</div>
+          <div class="l-url">huggingface.co/add2609/strip-fail-pattern-model</div>
+        </div>
+        <div class="l-go">開啟 →</div>
+      </a>
+    </div>
+  </header>
+
+  <section>
+    <span class="sec-tag usage">日常使用</span>
+    <h2>標記 → 訓練 → 推論</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-title">開①分類網站，Stage 1 蒐集資料、Stage 2 標記 fail pattern</div>
+        <div class="step-body">跟以前完全一樣，純瀏覽器操作，不用裝任何東西。</div>
+      </div>
+      <div class="step">
+        <div class="step-title">Stage 2 勾選「排除 None」，匯出 TrainReady JSON</div>
+        <div class="step-body">檔名長得像 <code>StripFailPattern_Stage2_Dataset_TrainReady_YYYYMMDD.json</code>，存到電腦裡記得的位置。</div>
+      </div>
+      <div class="step">
+        <div class="step-title">開②訓練主控台「訓練」分頁，上傳這份 JSON，按開始訓練</div>
+        <div class="step-body">模型選 <code>both</code> 最方便比較，其他參數維持預設即可。跑完會看到每個模型的準確率、分類報告、混淆矩陣。</div>
+      </div>
+      <div class="step">
+        <div class="step-title">確認結果上方出現綠色「已同步到 Hub」標籤</div>
+        <div class="step-body">代表這次訓練出的 <code>.pt</code> 已經自動存進③模型倉庫，就算 Space 之後睡眠重啟也不會遺失。想再三確認的話，直接開③的連結看檔案時間戳。</div>
+      </div>
+      <div class="step">
+        <div class="step-title">切到②「推論」分頁，上傳新的（未標記或要覆核的）Dataset JSON</div>
+        <div class="step-body">選 <code>mlp</code> 或 <code>cnn</code>，按開始推論，就會列出每個 strip 的 AI 判斷結果、信心分數，可以跟人工標記或 Stage 2 規則式判斷對照。</div>
+      </div>
+    </div>
+    <div class="callout">這整段流程完全不需要碰本機的任何 Python / venv，從頭到尾都是瀏覽器操作。</div>
+  </section>
+
+  <section>
+    <span class="sec-tag update">要改程式碼的時候</span>
+    <h2>Local 檔案 → 推上雲端</h2>
+
+    <div class="subcard">
+      <h3>情境 A：只改①分類網站的 Stage 1/2 內容（index.html）</h3>
+      <div class="steps">
+        <div class="step">
+          <div class="step-title">本機用任何文字編輯器改好 <code>index.html</code></div>
+          <div class="step-body">純文字檔，不需要裝任何工具。</div>
+        </div>
+        <div class="step">
+          <div class="step-title">開①的 <code>Files</code> 分頁，把新的 <code>index.html</code> 拖上去覆蓋舊檔</div>
+          <div class="step-body">Static Space 不用等 build，存檔後幾秒內網站就是新版本。</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="subcard">
+      <h3>情境 B：改②訓練/推論主控台的程式碼（app.py / train_core.py / predict_core.py / 網頁介面）</h3>
+      <div class="steps">
+        <div class="step">
+          <div class="step-title">本機改好對應的檔案</div>
+          <div class="step-body">要改網頁介面就改 <code>templates/index.html</code>，要改訓練邏輯就改 <code>train_core.py</code>，以此類推。</div>
+        </div>
+        <div class="step">
+          <div class="step-title">開②的 <code>Files</code> 分頁，把改過的檔案拖上去覆蓋</div>
+          <div class="step-body">記得檔案要落在 repo 根目錄（跟 <code>Dockerfile</code> 同一層），不要連同資料夾一起拖上去。</div>
+        </div>
+        <div class="step">
+          <div class="step-title">等 Space 自動重新 build（Docker SDK，通常 1-2 分鐘）</div>
+          <div class="step-body">畫面會顯示 <code>Building</code> → <code>Starting</code> → 正常運作。build log 有錯誤的話直接複製貼給 Claude 看。</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <span class="sec-tag fix">卡住的時候</span>
+    <h2>常見狀況速查</h2>
+    <table>
+      <thead><tr><th>畫面顯示</th><th>代表什麼</th><th>怎麼做</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Runtime error<br><code>Scheduling failure: not enough hardware capacity</code></td>
+          <td>HF 免費硬體暫時排滿，跟你的程式碼無關</td>
+          <td>Settings 裡 Restart，不行就等 10-20 分鐘再試</td>
+        </tr>
+        <tr>
+          <td>Starting… / Building…</td>
+          <td>正常啟動中</td>
+          <td>等 1-2 分鐘，重新整理頁面</td>
+        </tr>
+        <tr>
+          <td>推論時顯示「找不到模型檔」</td>
+          <td>本機沒有、Hub 也抓不到</td>
+          <td>先去「訓練」分頁跑過一次訓練；再檢查 <code>STRIP_MODEL_REPO_ID</code> / <code>HF_TOKEN</code> 是否設定正確</td>
+        </tr>
+        <tr>
+          <td>訓練結果顯示橘色「僅存本機」</td>
+          <td>Hub 推送失敗（通常是 token 或 repo id 打錯/過期）</td>
+          <td>檢查②Settings → Variables and secrets 裡兩個值，必要時重新產生 token</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="callout warn">
+      <b>Token 外流處理：</b>如果不小心把 <code>hf_...</code> 開頭的 token 貼在截圖、聊天訊息、或任何別人看得到的地方，
+      去 <code>huggingface.co/settings/tokens</code> 把那個 token <b>Revoke</b>，重新建一個 Write token，
+      再回②的 Secret 把 <code>HF_TOKEN</code> 換成新的值。
+    </div>
+  </section>
+
+  <footer>add2609 · strip-fail-pattern · 本頁存起來，忘記流程時回來看</footer>
+
+</div>
+</body>
+</html>
