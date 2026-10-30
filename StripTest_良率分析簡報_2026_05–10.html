@@ -20,6 +20,7 @@ svg{width:100%;height:auto;display:block}svg text{fill:var(--fg);font-size:11px}
 .ins{border-left:4px solid var(--ac);padding:2px 12px;margin:10px 0}.ins.r{border-color:var(--bad)}.ins.w{border-color:var(--warn)}
 .three{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}@media(max-width:900px){.three{grid-template-columns:1fr}}.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}@media(max-width:760px){.two{grid-template-columns:1fr}}
 table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:right}th:first-child,td:first-child{text-align:left}
+.lgs{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:8px;font-size:12px;color:var(--mut)}.lgs span{display:inline-flex;align-items:center;gap:6px}.lgs i{display:inline-block;width:14px;height:10px;border-radius:2px}.lgs .dm{width:9px;height:9px;transform:rotate(45deg);border-radius:0}.lgs .ci{width:10px;height:10px;border-radius:50%;border:2px solid var(--fg);background:none;box-sizing:border-box}.lgs .ln{height:0;border-top:2px solid var(--fg);border-radius:0}.lgs .ds{height:0;border-top:2px dashed var(--fg);border-radius:0}
 .tag{display:inline-block;padding:1px 8px;border-radius:99px;background:var(--line);font-size:12px;margin-right:4px}
 .nav{position:fixed;left:0;right:0;bottom:0;padding:8px 12px calc(8px + env(safe-area-inset-bottom,0px));background:var(--card);border-top:1px solid var(--line);display:flex;gap:8px;align-items:center;justify-content:center;z-index:11}
 button{font:inherit;background:var(--ac);color:#fff;border:0;border-radius:8px;padding:6px 16px;cursor:pointer}button.o{background:transparent;color:var(--fg);border:1px solid var(--line)}button.on{background:var(--ac);color:#fff}
@@ -120,7 +121,7 @@ s+=T(x+bw/2,t+ph-hh-5,v.a.toFixed(2)+'%')+`<text x="${x+bw/2}" y="${h-b+16}" tex
 const gy=Y(v.g);s+=`<path d="M${x+bw/2} ${gy-6}l6 6-6 6-6-6z" fill="var(--ok)"><title>排除異常後 ${v.g.toFixed(3)}%</title></path>`;
 pts.push([x+bw/2,t+ph*(1-cum/tt)])});
 s+=`<polyline fill="none" stroke="var(--fg)" stroke-width="1.6" points="${pts.map(p=>p.join(',')).join(' ')}"/>`+pts.map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="3" fill="var(--fg)"/>`).join('');
-$('#c3').innerHTML=s+'</svg>'})();
+$('#c3').innerHTML=s+'</svg><div class="lgs"><span><i style="background:var(--ac)"></i>長條:全部 strip 的失效率(佔 Input)</span><span><i style="background:var(--bad)"></i>紅色:IDSS1/2/3 漏電項目</span><span><i class="dm" style="background:var(--ok)"></i>菱形:排除 &lt;95% 異常 strip 後的失效率</span><span><i class="ln"></i>折線:累積占比(右軸)</span></div>'})();
 /* S4 */
 let mode=0;
 function r4(){const R=mode?D.hmgood:D.hm,w=900,lw=90,cw=(w-lw-10)/NW,ch=26,h=ch*10+40;
@@ -143,13 +144,13 @@ for(let v=lo;v<=hi+1e-9;v+=.002)s+=L(l,Y(v),w-r,Y(v))+T(l-6,Y(v)+4,P(v,1),'m','e
 g.forEach((v,i)=>{const x=l+i*bw,y=Y(v);s+=`<rect x="${x+4}" y="${y}" width="${bw-8}" height="${t+ph-y}" rx="2" fill="${cor.includes(i)?'var(--bad)':'var(--ac)'}" opacity=".85"><title>Site ${i+1}：${P(v,3)}（全部 strip ${P(D.site_all[i],3)}）</title></rect>`;
 s+=`<circle cx="${x+bw/2}" cy="${Y(D.site_all[i])}" r="4" fill="none" stroke="var(--fg)" stroke-width="1.5"/>`+T(x+bw/2,h-12,String(i+1).padStart(2,'0'),'m')});
 [[m,'平均','4 3'],[m-2*s2,'−2σ','2 3'],[m+2*s2,'+2σ','2 3']].forEach(a=>{s+=L(l,Y(a[0]),w-r,Y(a[0]),'g',`stroke="var(--fg)" stroke-dasharray="${a[2]}"`)});
-$('#c5').innerHTML=s+'</svg>';
+$('#c5').innerHTML=s+'</svg><div class="lgs"><span><i style="background:var(--ac)"></i>長條:排除異常 strip 的 site 良率</span><span><i style="background:var(--bad)"></i>紅色:四角落 site(01/06/19/24)</span><span><i class="ci"></i>空心圈:全部 strip(含異常)的良率</span><span><i class="ds"></i>虛線:平均與 ±2σ(24 個 site 長條值)</span></div>';
 const lo2=g.map((v,i)=>({i,l:1-v})).sort((a,b)=>b.l-a.l),tl=lo2.reduce((a,v)=>a+v.l,0);
 const h2=300,pb=40,ph2=h2-t-pb,mx=Math.max(...lo2.map(v=>v.l))*1.2,Y2=v=>t+ph2*(1-v/mx);let c=0,pt=[];
 let q=`<svg viewBox="0 0 ${w} ${h2}">`;
 for(let k=0;k<=4;k++){q+=L(l,t+ph2*k/4,w-r-30,t+ph2*k/4)+T(l-6,t+ph2*(1-k/4)+4,(mx*k/4*100).toFixed(2)+'%','m','end')+T(w-r-24,t+ph2*(1-k/4)+4,k*25+'%','m','start')}
 lo2.forEach((v,k)=>{const x=l+k*(pw-30)/24,bwd=(pw-30)/24;c+=v.l;q+=`<rect x="${x+3}" y="${Y2(v.l)}" width="${bwd-6}" height="${t+ph2-Y2(v.l)}" rx="2" fill="${cor.includes(v.i)?'var(--bad)':'var(--ac)'}" opacity=".85"/>`+T(x+bwd/2,h2-20,String(v.i+1).padStart(2,'0'),'m');pt.push([x+bwd/2,t+ph2*(1-c/tl)])});
-q+=`<polyline fill="none" stroke="var(--fg)" stroke-width="1.6" points="${pt.map(p=>p.join(',')).join(' ')}"/>`;$('#c5b').innerHTML=q+'</svg>';
+q+=`<polyline fill="none" stroke="var(--fg)" stroke-width="1.6" points="${pt.map(p=>p.join(',')).join(' ')}"/>`;$('#c5b').innerHTML=q+'</svg><div class="lgs"><span><i style="background:var(--ac)"></i>長條:site 損失(1 − 良率,左軸)</span><span><i style="background:var(--bad)"></i>紅色:四角落 site</span><span><i class="ln"></i>折線:累積占比(右軸)</span></div>';
 const cm=mean(cor.map(i=>g[i])),om=mean(g.filter((_,i)=>!cor.includes(i)));
 const top5=lo2.slice(0,5).map(v=>String(v.i+1).padStart(2,'0')).join('、');
 $('#t5').innerHTML=`Site 間差異很小(排除異常後 ${P(Math.min(...g),2)}–${P(Math.max(...g),2)}),但<b>角落 site 01/06/19/24(紅)平均 ${P(cm)},低於其他 site 的 ${P(om)}</b>;損失最高的前五名為 ${top5}。Pareto 偏平,屬於「系統性的小差異」而非單點失效。`})();
